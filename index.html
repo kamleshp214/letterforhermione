@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Ministry Protocol 722</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg: #050505;
+            --text-main: #e0e0e0;
+            --gold: #c5a059;
+            --danger: #8a1c1c;
+            --ministry-blue: #1a2b4a;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--bg);
+            color: var(--text-main);
+            font-family: 'Lato', sans-serif;
+            height: 100dvh;
+            width: 100vw;
+            overflow: hidden;
+            position: fixed;
+        }
+
+        /* --- PARTICLES --- */
+        #canvas-container {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1;
+            opacity: 0.4;
+        }
+
+        /* --- LAYOUT --- */
+        .screen {
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            opacity: 0; visibility: hidden;
+            padding: 20px;
+            background: radial-gradient(circle at center, rgba(20,30,40,0.4) 0%, #050505 100%);
+        }
+        .screen.active { opacity: 1; visibility: visible; z-index: 10; }
+
+        h1 {
+            font-family: 'Cinzel', serif;
+            color: var(--gold);
+            font-size: 1.8rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        p {
+            font-size: 1rem;
+            line-height: 1.5;
+            text-align: center;
+            color: #aaa;
+            max-width: 300px;
+        }
+
+        /* --- INTERACTIVE ELEMENTS --- */
+        .seal-btn {
+            width: 120px; height: 120px;
+            border-radius: 50%;
+            background: #000;
+            border: 2px solid var(--gold);
+            display: flex; justify-content: center; align-items: center;
+            box-shadow: 0 0 20px rgba(197, 160, 89, 0.2);
+            position: relative;
+        }
+        .seal-btn::before {
+            content: 'M';
+            font-family: 'Cinzel', serif;
+            font-size: 4rem;
+            color: var(--gold);
+        }
+
+        /* --- FINGERPRINT / WAND CALIBRATION --- */
+        .fingerprint-scanner {
+            width: 100px; height: 100px;
+            border: 2px dashed rgba(255,255,255,0.2);
+            border-radius: 50%;
+            margin: 30px auto;
+            position: relative;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .fingerprint-fill {
+            position: absolute;
+            width: 0%; height: 0%;
+            background: var(--gold);
+            border-radius: 50%;
+            transition: all 0.1s;
+            box-shadow: 0 0 30px var(--gold);
+        }
+
+        /* --- AMAZON FORM RESKINNED AS MINISTRY DOC --- */
+        .ministry-form {
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+            padding-bottom: 50px;
+        }
+
+        .form-header {
+            border-bottom: 1px solid var(--gold);
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            text-align: center;
+        }
+
+        .amz-input {
+            width: 100%;
+            height: 48px;
+            background: #fff;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            padding: 0 10px;
+            font-size: 16px;
+            color: #000;
+            margin-bottom: 15px;
+            font-family: sans-serif;
+            appearance: none;
+        }
+        
+        .amz-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: #ccc;
+            display: block;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* --- BUTTONS --- */
+        .action-btn {
+            background: var(--gold);
+            color: #000;
+            border: none;
+            width: 100%;
+            padding: 15px;
+            font-family: 'Cinzel', serif;
+            font-weight: bold;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 10px;
+            border-radius: 2px;
+        }
+
+        /* --- ERROR MESSAGE STYLE --- */
+        .status-msg {
+            color: var(--danger);
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+            border: 1px solid var(--danger);
+            padding: 10px;
+            background: rgba(138, 28, 28, 0.1);
+        }
+
+    </style>
+</head>
+<body>
+
+    <audio id="bg-music" loop>
+        <source src="https://ia801308.us.archive.org/27/items/HarryPotter-hedwigstheme/Harry_Potter_Theme_Song_Hedwigs_Theme.mp3" type="audio/mpeg">
+    </audio>
+
+    <div id="canvas-container"></div>
+
+    <div id="screen-0" class="screen active">
+        <div style="width: 80px; height: 80px; border: 2px solid var(--gold); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 20px;">
+            <span style="font-family: 'Cinzel'; font-size: 40px; color: var(--gold);">M</span>
+        </div>
+        <h1>Ministry Alert</h1>
+        <p>Magical Signature Detected.</p>
+        <p style="font-size: 0.8rem; margin-top: 40px; opacity: 0.6;">TAP TO VERIFY IDENTITY</p>
+        <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" onclick="startFlow()"></div>
+    </div>
+
+    <div id="screen-1" class="screen">
+        <h1>Identify</h1>
+        <p>Hold your thumb below to calibrate wand signature.</p>
+        
+        <div class="fingerprint-scanner" 
+             ontouchstart="startHold()" 
+             ontouchend="endHold()" 
+             onmousedown="startHold()" 
+             onmouseup="endHold()">
+            <div class="fingerprint-fill" id="fill"></div>
+        </div>
+        
+        <p id="hold-text" style="font-size: 0.8rem; letter-spacing: 2px;">HOLD TO SYNC</p>
+    </div>
+
+    <div id="screen-2" class="screen">
+        <div class="status-msg">
+            WARNING: OWL POST FAILURE<br>
+            RECIPIENT LOCATION: UNPLOTTABLE
+        </div>
+        <p>Identity Confirmed: <strong>Hermione Granger</strong></p>
+        <p>The Ministry of Magic has attempted to deliver high-priority intercepts, but your location is currently cloaked.</p>
+        <button class="action-btn" onclick="nextScreen(2, 3)">Update Registry</button>
+    </div>
+
+    <div id="screen-3" class="screen" style="justify-content: flex-start; padding-top: 40px;">
+        <div class="ministry-form">
+            <div class="form-header">
+                <h2 style="font-family: 'Cinzel'; color: var(--gold); font-size: 1.2rem; margin: 0;">Location Update</h2>
+                <span style="font-size: 0.7rem; color: #666;">FORM 7B-OWL // INDIA DIVISION</span>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <label class="amz-label">Full Name</label>
+                <input type="text" id="full-name" class="amz-input">
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <div style="flex:1">
+                    <label class="amz-label">Mobile</label>
+                    <input type="tel" id="mobile" class="amz-input">
+                </div>
+                <div style="flex:1">
+                    <label class="amz-label">PIN Code</label>
+                    <input type="number" id="pincode" class="amz-input">
+                </div>
+            </div>
+
+            <div>
+                <label class="amz-label">Flat, House no., Building</label>
+                <input type="text" id="house" class="amz-input">
+            </div>
+
+            <div>
+                <label class="amz-label">Area, Street, Sector</label>
+                <input type="text" id="area" class="amz-input">
+            </div>
+
+            <div>
+                <label class="amz-label">Landmark</label>
+                <input type="text" id="landmark" class="amz-input">
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <div style="flex:1">
+                    <label class="amz-label">City</label>
+                    <input type="text" id="city" class="amz-input">
+                </div>
+                <div style="flex:1">
+                    <label class="amz-label">State</label>
+                    <input type="text" id="state" class="amz-input">
+                </div>
+            </div>
+
+            <div id="spinner" style="display: none; text-align: center; margin: 10px;">
+                <span style="color: var(--gold);">Calibrating Coordinates...</span>
+            </div>
+
+            <button class="action-btn" id="submit-btn" onclick="submitFinal()">Update Coordinates</button>
+            <div style="height: 50px;"></div>
+        </div>
+    </div>
+
+    <div id="screen-4" class="screen">
+        <h1 style="font-size: 2.5rem; margin-bottom: 0;">Mischief Managed</h1>
+        <p style="margin-top: 20px;">Registry Updated.</p>
+        <p style="color: var(--gold);">The Owl has been dispatched.</p>
+    </div>
+
+    <script>
+        // --- EMAILJS CONFIG (REPLACE THESE) ---
+        const PUBLIC_KEY = 'YOUR_PUBLIC_KEY'; 
+        const SERVICE_ID = 'YOUR_SERVICE_ID';
+        const TEMPLATE_ID = 'YOUR_TEMPLATE_ID';
+
+        (function(){ emailjs.init(PUBLIC_KEY); })();
+
+        // --- NAVIGATION ---
+        function startFlow() {
+            document.getElementById('bg-music').play().catch(e=>console.log("Audio requires touch"));
+            nextScreen(0, 1);
+        }
+
+        function nextScreen(from, to) {
+            gsap.to(`#screen-${from}`, {opacity: 0, duration: 0.5, onComplete: () => {
+                document.getElementById(`screen-${from}`).classList.remove('active');
+                document.getElementById(`screen-${to}`).classList.add('active');
+                gsap.fromTo(`#screen-${to}`, {opacity: 0, scale: 0.95}, {opacity: 1, scale: 1, duration: 0.5});
+            }});
+        }
+
+        // --- HOLD TO SYNC MECHANIC ---
+        let holdTimer;
+        let holdProgress = 0;
+        const fill = document.getElementById('fill');
+        
+        function startHold() {
+            if(holdProgress >= 100) return;
+            gsap.to(fill, {width: 100, height: 100, duration: 2, ease: "none", onUpdate: function() {
+                holdProgress = this.progress() * 100;
+                fill.style.width = holdProgress + '%';
+                fill.style.height = holdProgress + '%';
+            }, onComplete: () => {
+                document.getElementById('hold-text').innerText = "CALIBRATION COMPLETE";
+                document.getElementById('hold-text').style.color = "#c5a059";
+                setTimeout(() => nextScreen(1, 2), 500);
+            }});
+        }
+
+        function endHold() {
+            if(holdProgress < 100) {
+                gsap.killTweensOf(fill);
+                gsap.to(fill, {width: 0, height: 0, duration: 0.3});
+                holdProgress = 0;
+            }
+        }
+
+        // --- SUBMIT ---
+        function submitFinal() {
+            // Collect Data
+            const data = {
+                name: document.getElementById('full-name').value,
+                mobile: document.getElementById('mobile').value,
+                pin: document.getElementById('pincode').value,
+                house: document.getElementById('house').value,
+                area: document.getElementById('area').value,
+                landmark: document.getElementById('landmark').value,
+                city: document.getElementById('city').value,
+                state: document.getElementById('state').value
+            };
+
+            // Validate
+            if(!data.name || !data.pin || !data.house) {
+                alert("Ministry Protocol requires Name, PIN, and House Number.");
+                return;
+            }
+
+            // UI
+            document.getElementById('submit-btn').style.display = 'none';
+            document.getElementById('spinner').style.display = 'block';
+
+            // Send
+            emailjs.send(SERVICE_ID, TEMPLATE_ID, data)
+                .then(() => {
+                    nextScreen(3, 4);
+                }, (err) => {
+                    alert("Ministry Network Down. Screenshot this page.");
+                    document.getElementById('submit-btn').style.display = 'block';
+                    document.getElementById('spinner').style.display = 'none';
+                });
+        }
+
+        // --- BACKGROUND PARTICLES ---
+        // Simple canvas dust effect
+        const canvas = document.createElement('canvas');
+        document.getElementById('canvas-container').appendChild(canvas);
+        const ctx = canvas.getContext('2d');
+        
+        function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+        window.addEventListener('resize', resize); resize();
+
+        let particles = [];
+        for(let i=0; i<50; i++) particles.push({
+            x: Math.random()*canvas.width, 
+            y: Math.random()*canvas.height, 
+            v: Math.random()*0.5
+        });
+
+        function animate() {
+            ctx.clearRect(0,0,canvas.width, canvas.height);
+            ctx.fillStyle = "#c5a059";
+            particles.forEach(p => {
+                p.y -= p.v;
+                if(p.y < 0) p.y = canvas.height;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, Math.random()*2, 0, Math.PI*2);
+                ctx.fill();
+            });
+            requestAnimationFrame(animate);
+        }
+        animate();
+
+    </script>
+</body>
+</html>
