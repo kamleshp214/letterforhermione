@@ -3,27 +3,33 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Mischief Managed</title>
+<title>The Magical Archive</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600&family=Mr+De+Haviland&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Cormorant+Garamond:ital,wght@0,500;0,700;1,500&family=Great+Vibes&display=swap" rel="stylesheet">
 
 <style>
+    /* -----------------------------------------------------------
+       1. VARIABLES & THEME (High Contrast / Luxury)
+    ----------------------------------------------------------- */
     :root {
-        --paper: #F2E8C9; /* Warm Parchment */
-        --ink: #2A1B0E;    /* Deep Sepia Ink */
-        --ink-light: #5C4033;
-        --burgundy: #740001;
-        --gold: #D4AF37;
+        --bg-color: #1a1a2e; /* Deep Navy Background */
+        --card-bg: #fffbf0;  /* Cream Parchment - 100% SOLID */
+        --ink: #16213e;      /* Navy Ink Text */
+        --accent: #c7a008;   /* Bright Gold */
+        --accent-glow: rgba(199, 160, 8, 0.4);
+        --burgundy: #800000;
+        --white: #ffffff;
+        --shadow: 0 10px 30px rgba(0,0,0,0.3);
     }
 
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; user-select: none; }
 
     body {
         margin: 0; padding: 0;
-        background-color: var(--paper);
+        background-color: var(--bg-color);
         color: var(--ink);
         font-family: 'Cormorant Garamond', serif;
         height: 100dvh; width: 100vw;
@@ -31,239 +37,285 @@
         position: fixed;
     }
 
-    /* --- BACKGROUND TEXTURE --- */
-    #paper-texture {
-        position: fixed; inset: 0;
-        background-image: url("https://www.transparenttextures.com/patterns/aged-paper.png");
-        opacity: 0.8; z-index: -1;
-    }
+    /* --- BACKGROUND MAGIC --- */
+    #stars-container { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
+    .star { position: absolute; background: white; border-radius: 50%; opacity: 0.5; animation: twinkle 3s infinite; }
     
-    #map-overlay {
-        position: fixed; inset: 0; z-index: -1; opacity: 0.1;
-        background: repeating-linear-gradient(45deg, #2A1B0E 0, #2A1B0E 1px, transparent 0, transparent 50%);
-        background-size: 20px 20px;
-        mask-image: radial-gradient(circle, transparent 30%, black 100%);
+    @keyframes twinkle { 0%, 100% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.2); } }
+
+    /* --- LAYOUT CONTAINER --- */
+    #app {
+        position: relative;
+        width: 100%; height: 100%;
+        display: flex; justify-content: center; align-items: center;
+        perspective: 1000px;
     }
 
-    /* --- LAYOUT --- */
+    /* --- THE MAGICAL CARD (The Core UI) --- */
+    .magic-card {
+        width: 90%; max-width: 420px;
+        background: var(--card-bg);
+        border-radius: 20px; /* Cute rounded corners */
+        box-shadow: 
+            0 0 0 8px rgba(255, 255, 255, 0.1), /* Outer Halo */
+            0 20px 50px rgba(0,0,0,0.5);        /* Deep Shadow */
+        padding: 30px 24px;
+        position: relative;
+        display: flex; flex-direction: column; align-items: center;
+        overflow: hidden;
+        border: 2px solid var(--accent);
+        transform-style: preserve-3d;
+        /* Magical Texture Overlay */
+        background-image: radial-gradient(#e6dfcc 1px, transparent 1px);
+        background-size: 20px 20px;
+    }
+
+    /* Decorative Corners */
+    .corner {
+        position: absolute; width: 40px; height: 40px;
+        border: 3px solid var(--accent);
+        opacity: 0.6; pointer-events: none;
+    }
+    .tl { top: 12px; left: 12px; border-right: none; border-bottom: none; border-radius: 12px 0 0 0; }
+    .tr { top: 12px; right: 12px; border-left: none; border-bottom: none; border-radius: 0 12px 0 0; }
+    .bl { bottom: 12px; left: 12px; border-right: none; border-top: none; border-radius: 0 0 0 12px; }
+    .br { bottom: 12px; right: 12px; border-left: none; border-top: none; border-radius: 0 0 12px 0; }
+
+    /* --- SCREENS --- */
     .screen {
         position: absolute; inset: 0;
         display: flex; flex-direction: column;
         align-items: center; justify-content: center;
-        padding: 24px;
-        opacity: 0; visibility: hidden;
-        z-index: 10;
-        transition: opacity 0.6s ease;
+        padding: 20px;
+        opacity: 0; visibility: hidden; /* Hidden by default */
+        z-index: 1;
+        transition: opacity 0.4s ease;
     }
-    .screen.active { opacity: 1; visibility: visible; }
+    .screen.active { opacity: 1; visibility: visible; z-index: 10; position: relative; }
 
-    /* --- TYPOGRAPHY (Handwritten & Bold) --- */
+    /* --- TYPOGRAPHY --- */
     h1 {
         font-family: 'Cinzel', serif;
-        font-size: 2.2rem;
-        color: var(--ink);
+        font-size: 1.8rem;
+        color: var(--burgundy);
         text-align: center;
-        text-transform: uppercase;
-        letter-spacing: 2px;
         margin-bottom: 10px;
-        border-bottom: 2px solid var(--ink);
-        padding-bottom: 10px;
+        line-height: 1.2;
     }
 
-    .handwritten {
-        font-family: 'Mr De Haviland', cursive;
-        font-size: 3.5rem;
-        color: var(--burgundy);
-        line-height: 0.8;
-        transform: rotate(-5deg);
-        margin: 10px 0;
+    h2 {
+        font-family: 'Cinzel', serif;
+        font-size: 0.75rem;
+        letter-spacing: 3px;
+        color: var(--accent);
+        text-transform: uppercase;
+        margin-bottom: 25px;
+        font-weight: 700;
+        border-bottom: 2px solid var(--accent);
+        padding-bottom: 5px;
     }
 
     p {
-        font-size: 1.4rem;
-        font-weight: 600;
-        text-align: center;
-        color: var(--ink-light);
-        margin-bottom: 30px;
-        line-height: 1.4;
-    }
-
-    /* --- COMPONENT: THE INK CARD --- */
-    .ink-card {
-        width: 100%; max-width: 450px;
-        background: rgba(242, 232, 201, 0.9);
-        border: 2px solid var(--ink);
-        border-radius: 8px;
-        padding: 20px;
-        box-shadow: 10px 10px 0px rgba(42, 27, 14, 0.1); /* Ink Shadow */
-        position: relative;
-    }
-
-    /* Corners */
-    .ink-card::before {
-        content: ''; position: absolute; inset: 4px;
-        border: 1px solid var(--ink);
-        pointer-events: none;
-    }
-
-    /* --- COMPONENT: OPTIONS (INK STAMPS) --- */
-    .options-stack { display: flex; flex-direction: column; gap: 15px; width: 100%; }
-
-    .ink-btn {
-        width: 100%;
-        background: transparent;
-        border: 2px solid var(--ink);
-        padding: 18px;
-        display: flex; align-items: center; justify-content: center;
-        cursor: pointer;
-        transition: 0.2s;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .btn-text {
-        font-size: 1.3rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        color: var(--ink);
-        z-index: 2;
-    }
-
-    /* Selection Effect: Ink Blot */
-    .ink-btn::after {
-        content: ''; position: absolute; inset: 0;
-        background: var(--ink);
-        transform: scaleX(0); transform-origin: left;
-        transition: transform 0.3s cubic-bezier(0.7, 0, 0.3, 1);
-        z-index: 1;
-    }
-
-    .ink-btn.active::after { transform: scaleX(1); }
-    .ink-btn.active .btn-text { color: var(--paper); }
-
-    /* --- FOOTSTEPS ANIMATION --- */
-    .footstep {
-        position: fixed;
-        font-size: 24px;
-        color: var(--ink);
-        opacity: 0;
-        pointer-events: none;
-        z-index: 5;
-    }
-
-    /* --- FORM --- */
-    .form-line {
-        width: 100%;
-        border: none;
-        background: transparent;
-        border-bottom: 2px solid var(--ink);
-        padding: 12px 0;
-        font-family: 'Cormorant Garamond', serif;
-        font-size: 1.5rem;
-        color: var(--ink);
-        font-weight: 700;
-        margin-bottom: 20px;
-    }
-    .form-line::placeholder { color: rgba(42, 27, 14, 0.4); font-style: italic; }
-    .form-line:focus { border-bottom-color: var(--burgundy); }
-
-    .confirm-btn {
-        background: var(--burgundy);
-        color: var(--paper);
-        font-family: 'Cinzel', serif;
         font-size: 1.2rem;
-        padding: 18px;
-        width: 100%;
-        border: none;
-        margin-top: 10px;
-        box-shadow: 5px 5px 0 rgba(0,0,0,0.2);
+        text-align: center;
+        color: var(--ink);
+        line-height: 1.5;
+        margin-bottom: 25px;
     }
+
+    .script {
+        font-family: 'Great Vibes', cursive;
+        font-size: 3rem;
+        color: var(--burgundy);
+        line-height: 1;
+    }
+
+    /* --- BUTTONS & OPTIONS (High Visibility) --- */
+    .options-grid { width: 100%; display: flex; flex-direction: column; gap: 12px; }
+
+    .option-btn {
+        width: 100%;
+        background: var(--white); /* PURE WHITE BACKGROUND */
+        border: 2px solid #e0e0e0;
+        border-radius: 12px;
+        padding: 16px 20px;
+        display: flex; align-items: center; justify-content: space-between;
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); /* Bouncy */
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+
+    .option-text {
+        font-family: 'Cormorant Garamond', serif;
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: var(--ink);
+    }
+
+    .option-circle {
+        width: 24px; height: 24px;
+        border-radius: 50%;
+        border: 2px solid #ccc;
+        background: transparent;
+        transition: 0.2s;
+    }
+
+    /* ACTIVE STATE */
+    .option-btn:active, .option-btn.selected {
+        background: var(--accent); /* GOLD BACKGROUND */
+        border-color: var(--accent);
+        transform: scale(0.98);
+        box-shadow: 0 0 15px var(--accent-glow);
+    }
+    
+    .option-btn.selected .option-text { color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+    .option-btn.selected .option-circle { background: white; border-color: white; }
+
+    /* --- INPUTS --- */
+    .magic-input {
+        width: 100%;
+        background: #fff;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 14px;
+        font-family: 'Cormorant Garamond', serif;
+        font-size: 1.1rem;
+        color: var(--ink);
+        margin-bottom: 15px;
+        transition: 0.3s;
+    }
+    .magic-input:focus { border-color: var(--burgundy); outline: none; box-shadow: 0 0 0 3px rgba(128, 0, 0, 0.1); }
+    .magic-input::placeholder { color: #aaa; }
+
+    .primary-btn {
+        width: 100%;
+        background: var(--burgundy);
+        color: white;
+        border: none;
+        padding: 16px;
+        font-family: 'Cinzel', serif;
+        font-weight: 700;
+        font-size: 1rem;
+        border-radius: 50px;
+        margin-top: 10px;
+        box-shadow: 0 5px 15px rgba(128, 0, 0, 0.3);
+        transition: 0.2s;
+    }
+    .primary-btn:active { transform: scale(0.95); }
+
+    /* --- INTRO ELEMENT --- */
+    .wax-seal-btn {
+        width: 100px; height: 100px;
+        background: var(--burgundy);
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        border: 4px solid rgba(255,255,255,0.2);
+        animation: pulse 2s infinite;
+        cursor: pointer;
+    }
+    @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
 
     /* --- UTILS --- */
-    .progress-ink {
-        position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
-        font-family: 'Cinzel'; font-size: 0.9rem; color: var(--ink-light);
-        opacity: 0.6;
+    .progress-bar {
+        position: absolute; top: 0; left: 0; height: 4px;
+        background: var(--burgundy); width: 0%; transition: width 0.4s;
     }
 
 </style>
 </head>
 <body>
 
-    <div id="paper-texture"></div>
-    <div id="map-overlay"></div>
+    <div id="stars-container"></div>
 
-    <div id="screen-intro" class="screen active">
-        <h1 style="border:none; font-size: 1.5rem;">The Archive</h1>
-        <div class="ink-card" style="text-align: center; padding: 40px;" onclick="startApp()">
-            <p style="font-size: 1.6rem; color: var(--ink); margin: 0;">Tap to Reveal</p>
-            <div class="handwritten" style="font-size: 4rem; margin-top: 20px;">I solemnly swear...</div>
-        </div>
-    </div>
-
-    <div id="screen-quiz" class="screen">
-        <h2 id="q-counter" class="progress-ink">PAGE 1 / 12</h2>
-        <div class="ink-card">
-            <h1 id="q-text" style="border:none; font-size: 1.6rem; margin-bottom: 30px;">Question</h1>
-            <div class="options-stack" id="options-container"></div>
-        </div>
-    </div>
-
-    <div id="screen-bridge" class="screen">
-        <div class="handwritten" id="bridge-text" style="font-size: 6rem; opacity: 0;">Magic</div>
-    </div>
-
-    <div id="screen-reveal" class="screen">
-        <div class="ink-card" style="text-align: center;">
-            <p style="text-transform: uppercase; font-size: 0.9rem; letter-spacing: 2px;">Identity Verified</p>
-            <h1 style="font-size: 2.5rem; border-bottom: 2px double var(--ink); padding-bottom: 15px;">Hermione Granger</h1>
-            <p style="margin-top: 20px;">It wasn't just the books. It was the loyalty. You stayed when everyone else left.</p>
-            <div class="handwritten" style="font-size: 3rem;">That is why.</div>
-            <button class="confirm-btn" onclick="goToForm()">Open Registry</button>
-        </div>
-    </div>
-
-    <div id="screen-form" class="screen">
-        <div class="ink-card">
-            <h1 style="font-size: 1.8rem; margin-bottom: 20px;">Owl Post Registry</h1>
+    <div id="app">
+        <div class="magic-card">
+            <div class="progress-bar" id="progress"></div>
             
-            <input type="text" id="name" class="form-line" placeholder="Witch's Name">
-            <input type="tel" id="mobile" class="form-line" placeholder="Mobile Number">
-            <div style="display: flex; gap: 15px;">
-                <input type="number" id="pin" class="form-line" placeholder="PIN">
-                <input type="text" id="city" class="form-line" placeholder="City">
-            </div>
-            <input type="text" id="address" class="form-line" placeholder="Full Address">
+            <div class="corner tl"></div><div class="corner tr"></div>
+            <div class="corner bl"></div><div class="corner br"></div>
 
-            <button class="confirm-btn" id="submit-btn" onclick="submitForm()">Mischief Managed</button>
-            <p id="loading" style="display: none; text-align: center; margin-top: 15px;">Owl taking flight...</p>
+            <div id="screen-intro" class="screen active">
+                <div style="margin-bottom: 30px;">
+                    <div class="wax-seal-btn" onclick="startApp()">
+                        <span style="font-family:'Cinzel'; font-size: 2.5rem; color: #e6dfcc;">H</span>
+                    </div>
+                </div>
+                <h1>The Archive</h1>
+                <p style="font-size: 0.9rem; letter-spacing: 2px; text-transform: uppercase; color: #888;">Tap Seal to Open</p>
+            </div>
+
+            <div id="screen-quiz" class="screen">
+                <h2 id="q-counter">Memory 1 / 12</h2>
+                <p id="q-text" style="font-size: 1.4rem; font-weight: 600; margin-bottom: 25px;">Question Text</p>
+                <div class="options-grid" id="options-container"></div>
+            </div>
+
+            <div id="screen-bridge" class="screen">
+                <div class="script" id="bridge-text" style="opacity: 0; transform: scale(0.5);">Magic</div>
+            </div>
+
+            <div id="screen-reveal" class="screen">
+                <h2>Analysis Complete</h2>
+                <h1 style="font-size: 2.2rem; margin-bottom: 10px;">Hermione Granger</h1>
+                <p style="font-style: italic; color: #666; font-size: 1rem;">"The brightest witch of her age."</p>
+                <div style="width: 50px; height: 2px; background: var(--accent); margin: 20px auto;"></div>
+                <p>It wasn't just the cleverness. It was the loyalty. You stayed when everyone else left. That is why you are her.</p>
+                <button class="primary-btn" onclick="goToForm()">Unlock Registry</button>
+            </div>
+
+            <div id="screen-form" class="screen">
+                <h1>Owl Registry</h1>
+                <p style="font-size: 0.9rem; margin-bottom: 20px; color: #666;">Enter coordinates for delivery.</p>
+                
+                <input type="text" id="name" class="magic-input" placeholder="Full Name">
+                <input type="tel" id="mobile" class="magic-input" placeholder="Mobile Number">
+                <div style="display: flex; gap: 10px; width: 100%;">
+                    <input type="number" id="pin" class="magic-input" placeholder="PIN Code">
+                    <input type="text" id="city" class="magic-input" placeholder="City">
+                </div>
+                <input type="text" id="address" class="magic-input" placeholder="Full Address">
+
+                <button class="primary-btn" id="submit-btn" onclick="submitForm()">Mischief Managed</button>
+                <p id="loading" style="display: none; color: var(--burgundy); font-weight: bold; margin-top: 15px;">Dispatching Owl...</p>
+            </div>
+
+            <div id="screen-end" class="screen">
+                <h1 style="font-size: 3rem; color: var(--burgundy);">Always.</h1>
+                <p>The letter is on its way.</p>
+            </div>
         </div>
     </div>
-
-    <div id="screen-end" class="screen">
-        <div class="handwritten" style="font-size: 5rem;">Always.</div>
-        <p>The Owl is on its way.</p>
-    </div>
-
-    <div id="footsteps-layer"></div>
 
     <script>
-        // *** CONFIGURATION: ADD KEYS HERE ***
+        // *** CONFIGURATION: PASTE KEYS HERE ***
         const EMAIL_KEY = 'YOUR_PUBLIC_KEY'; 
         const SERVICE_ID = 'YOUR_SERVICE_ID';
         const TEMPLATE_ID = 'YOUR_TEMPLATE_ID';
 
         (function(){ emailjs.init(EMAIL_KEY); })();
 
+        // --- BACKGROUND STARS ---
+        const starContainer = document.getElementById('stars-container');
+        for(let i=0; i<50; i++){
+            let s = document.createElement('div');
+            s.className = 'star';
+            s.style.left = Math.random()*100 + 'vw';
+            s.style.top = Math.random()*100 + 'vh';
+            s.style.width = Math.random()*3 + 'px';
+            s.style.height = s.style.width;
+            s.style.animationDelay = Math.random()*2 + 's';
+            starContainer.appendChild(s);
+        }
+
         // --- QUESTIONS ---
         const questions = [
-            { q: "The Hat sits on your head. Where do you belong?", o: ["Gryffindor", "Ravenclaw", "Slytherin", "Hufflepuff"] },
+            { q: "The Hat sits on your head. Where do you belong?", o: ["Gryffindor (Brave)", "Ravenclaw (Wise)", "Slytherin (Ambitious)", "Hufflepuff (Loyal)"] },
             { q: "What do you see in the Mirror of Erised?", o: ["Glory", "Peace", "Love", "Knowledge"] },
             { q: "The Boggart appears. What is it?", o: ["Failure", "Isolation", "Darkness", "Loss"] },
             { q: "Who do you hope asks you to the Ball?", o: ["Harry", "Ron", "Draco", "No one"] },
             { q: "Which death hurt the most?", o: ["Dobby", "Sirius", "Fred", "Snape"] },
-            { q: "Choose one Hallow.", o: ["Elder Wand", "Stone", "Cloak", "None"] },
+            { q: "Choose one Hallow.", o: ["Elder Wand", "Resurrection Stone", "Cloak", "None"] },
             { q: "Why did you stay when Ron left?", o: ["Duty", "Hope", "Loyalty", "Love"] },
             { q: "Did you forgive Snape?", o: ["Yes", "No", "Complicated", "Always"] },
             { q: "How did the ending feel?", o: ["Perfect", "Sad", "Hopeful", "Empty"] },
@@ -275,12 +327,10 @@
         let qIdx = 0;
         let answers = {};
 
-        // --- LOGIC ---
+        // --- NAVIGATION LOGIC ---
         function startApp() {
-            gsap.to('#screen-intro', { opacity: 0, scale: 1.1, duration: 0.5, onComplete: () => {
-                document.getElementById('screen-intro').classList.remove('active');
-                document.getElementById('screen-quiz').classList.add('active');
-                gsap.fromTo('#screen-quiz', { opacity: 0 }, { opacity: 1, duration: 0.5 });
+            gsap.to('#screen-intro', { opacity: 0, scale: 0.9, duration: 0.5, onComplete: () => {
+                transitionTo('screen-intro', 'screen-quiz');
                 loadQuestion();
             }});
         }
@@ -289,81 +339,65 @@
             const data = questions[qIdx];
             const container = document.getElementById('options-container');
             const qText = document.getElementById('q-text');
-            
-            document.getElementById('q-counter').innerText = `PAGE ${qIdx + 1} / ${questions.length}`;
+            const qCount = document.getElementById('q-counter');
 
-            // Fade Out
+            gsap.to('#progress', { width: `${((qIdx)/questions.length)*100}%` });
+
+            // Animate Out
             gsap.to([qText, container], { opacity: 0, y: -10, duration: 0.2, onComplete: () => {
+                qCount.innerText = `Memory ${qIdx + 1} / ${questions.length}`;
                 qText.innerText = data.q;
                 container.innerHTML = '';
 
                 data.o.forEach(opt => {
                     const btn = document.createElement('div');
-                    btn.className = 'ink-btn';
-                    btn.innerHTML = `<span class="btn-text">${opt}</span>`;
-                    btn.onclick = (e) => selectOption(e, btn, opt);
+                    btn.className = 'option-btn';
+                    btn.innerHTML = `<span class="option-text">${opt}</span><div class="option-circle"></div>`;
+                    btn.onclick = () => selectOption(btn, opt);
                     container.appendChild(btn);
                 });
 
-                // Fade In
-                gsap.to([qText, container], { opacity: 1, y: 0, duration: 0.3 });
-                gsap.from('.ink-btn', { x: -20, opacity: 0, stagger: 0.05 });
+                // Animate In
+                gsap.to([qText, container], { opacity: 1, y: 0, duration: 0.4 });
+                gsap.from('.option-btn', { x: -20, opacity: 0, stagger: 0.05, delay: 0.1 });
             }});
         }
 
-        function selectOption(e, btn, val) {
-            btn.classList.add('active');
+        function selectOption(btn, val) {
+            btn.classList.add('selected');
             answers[`Q${qIdx+1}`] = val;
             
-            // FOOTSTEPS EFFECT
-            createFootsteps();
+            // Interaction visual
+            gsap.to(btn, { scale: 0.95, duration: 0.1, yoyo: true, repeat: 1 });
 
             setTimeout(() => {
                 qIdx++;
                 if(qIdx < questions.length) {
                     loadQuestion();
                 } else {
+                    gsap.to('#progress', { width: '100%' });
                     showBridge();
                 }
-            }, 600);
-        }
-
-        function createFootsteps() {
-            const layer = document.getElementById('footsteps-layer');
-            const steps = ['👣', '👣', '👣'];
-            
-            steps.forEach((step, i) => {
-                const el = document.createElement('div');
-                el.className = 'footstep';
-                el.innerText = step;
-                // Random position near center
-                el.style.left = (window.innerWidth/2 - 50 + (i*30)) + 'px';
-                el.style.top = (window.innerHeight/2 + (i*40)) + 'px';
-                layer.appendChild(el);
-
-                gsap.to(el, { opacity: 1, duration: 0.5, delay: i*0.2, onComplete: () => {
-                    gsap.to(el, { opacity: 0, duration: 0.5, delay: 0.2, onComplete: () => el.remove() });
-                }});
-            });
+            }, 400);
         }
 
         function showBridge() {
-            transition('screen-quiz', 'screen-bridge');
-            gsap.fromTo('#bridge-text', { opacity: 0, scale: 0.5 }, { opacity: 1, scale: 1.2, duration: 2, onComplete: () => {
-                transition('screen-bridge', 'screen-reveal');
+            transitionTo('screen-quiz', 'screen-bridge');
+            gsap.to('#bridge-text', { opacity: 1, scale: 1.2, duration: 1.5, ease: "elastic.out(1, 0.5)", onComplete: () => {
+                setTimeout(() => transitionTo('screen-bridge', 'screen-reveal'), 1000);
             }});
         }
 
-        function goToForm() { transition('screen-reveal', 'screen-form'); }
+        function goToForm() { transitionTo('screen-reveal', 'screen-form'); }
 
-        function transition(fromID, toID) {
-            const from = document.getElementById(fromID);
-            const to = document.getElementById(toID);
-            gsap.to(from, { opacity: 0, duration: 0.5, onComplete: () => {
-                from.classList.remove('active');
-                to.classList.add('active');
-                gsap.fromTo(to, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.5 });
-            }});
+        function transitionTo(fromId, toId) {
+            const from = document.getElementById(fromId);
+            const to = document.getElementById(toId);
+            
+            from.classList.remove('active');
+            to.classList.add('active');
+            
+            gsap.fromTo(to, { opacity: 0, x: 20 }, { opacity: 1, x: 0, duration: 0.5 });
         }
 
         function submitForm() {
@@ -377,7 +411,7 @@
             };
 
             if(!data.name || !data.address) {
-                gsap.to('.ink-card', { x: 10, duration: 0.1, yoyo: true, repeat: 5 });
+                gsap.to('.magic-card', { x: 10, duration: 0.1, yoyo: true, repeat: 5 });
                 return;
             }
 
@@ -385,9 +419,10 @@
             document.getElementById('loading').style.display = 'block';
 
             emailjs.send(SERVICE_ID, TEMPLATE_ID, data)
-                .then(() => transition('screen-form', 'screen-end'))
+                .then(() => transitionTo('screen-form', 'screen-end'))
                 .catch(() => alert('Error. Please screenshot.'));
         }
+
     </script>
 </body>
 </html>
