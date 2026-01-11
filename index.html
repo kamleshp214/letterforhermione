@@ -8,17 +8,16 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Montserrat:wght@300;400;600&family=Pinyon+Script&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;800&family=Montserrat:wght@300;400;600&family=Pinyon+Script&display=swap" rel="stylesheet">
 
 <style>
     :root {
         --deep-space: #050508;
-        --card-bg: rgba(20, 20, 25, 0.7);
+        --card-bg: rgba(18, 18, 20, 0.85); /* Darker, more opaque for contrast */
         --gold: #FFD700;
         --gold-dim: #C5A059;
         --text-white: #FFFFFF;
         --text-grey: #B0B0B0;
-        --error: #ff4d4d;
     }
 
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; user-select: none; }
@@ -34,11 +33,19 @@
     }
 
     /* --- BACKGROUND FX --- */
-    #bg-canvas { position: fixed; top: 0; left: 0; z-index: -1; }
+    #bg-canvas { position: fixed; top: 0; left: 0; z-index: -1; opacity: 0.6; }
+    
+    /* Texture Overlay to remove "flatness" */
+    #noise-overlay {
+        position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.05;
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='1'/%3E%3C/svg%3E");
+    }
+
+    /* Dark Vignette to focus center */
     #vignette {
         position: fixed; inset: 0;
-        background: radial-gradient(circle at center, transparent 0%, #000000 120%);
-        pointer-events: none; z-index: 0;
+        background: radial-gradient(circle at center, transparent 40%, #000000 120%);
+        pointer-events: none; z-index: 1;
     }
 
     /* --- LAYOUT --- */
@@ -46,205 +53,155 @@
         position: absolute; inset: 0;
         display: flex; flex-direction: column;
         align-items: center; justify-content: center;
-        padding: 24px;
+        padding: 20px;
         opacity: 0; visibility: hidden;
-        transition: opacity 0.6s cubic-bezier(0.25, 1, 0.5, 1);
         z-index: 10;
+        transition: opacity 0.5s ease;
     }
     .screen.active { opacity: 1; visibility: visible; }
 
-    /* --- TYPOGRAPHY --- */
-    h1 {
-        font-family: 'Cinzel', serif;
-        font-size: 2.2rem;
-        color: var(--gold);
-        text-align: center;
-        margin-bottom: 8px;
-        text-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
-    }
+    /* --- COMPONENTS --- */
     
-    h2 {
-        font-size: 0.9rem;
-        text-transform: uppercase;
-        letter-spacing: 3px;
-        color: var(--text-grey);
-        margin-bottom: 30px;
-        text-align: center;
-    }
-
-    p {
-        text-align: center;
-        line-height: 1.6;
-        color: #ddd;
-        max-width: 500px;
-        font-weight: 300;
-        margin-bottom: 30px;
-    }
-
-    /* --- COMPONENT: HERO CARD --- */
+    /* THE CARD (Glass Panel) */
     .glass-panel {
         background: var(--card-bg);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 24px;
-        padding: 30px 20px;
-        width: 100%; max-width: 450px;
-        box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 215, 0, 0.3); /* Gold border */
+        box-shadow: 0 0 40px rgba(0,0,0,0.8);
+        border-radius: 20px;
+        padding: 30px 24px;
+        width: 100%; max-width: 500px; /* Wider for mobile */
         display: flex; flex-direction: column; align-items: center;
+        position: relative;
     }
 
-    /* --- COMPONENT: BUTTONS (OPTIONS) --- */
-    .options-grid { width: 100%; display: flex; flex-direction: column; gap: 12px; }
+    /* TOP LABEL (Memory X of 12) */
+    h2 {
+        font-family: 'Montserrat', sans-serif;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 4px; /* Premium look spacing */
+        color: var(--gold-dim);
+        margin-bottom: 20px;
+        opacity: 0.9;
+    }
 
+    /* MAIN QUESTION */
+    h1 {
+        font-family: 'Cinzel', serif;
+        font-size: 1.6rem;
+        line-height: 1.4;
+        color: var(--text-white); /* White for max contrast */
+        text-align: center;
+        margin-bottom: 30px;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.5); /* Shadow for pop */
+    }
+
+    /* OPTIONS CONTAINER */
+    .options-grid { width: 100%; display: flex; flex-direction: column; gap: 15px; }
+
+    /* THE BUTTONS - HIGH CONTRAST */
     .option-btn {
         width: 100%;
-        background: rgba(0,0,0,0.4);
-        border: 1px solid rgba(255, 255, 255, 0.15);
+        background: rgba(255, 255, 255, 0.05); /* Slight fill */
+        border: 1px solid rgba(255, 255, 255, 0.3); /* Visible Border */
         border-radius: 12px;
         padding: 18px 20px;
         display: flex; align-items: center; justify-content: space-between;
-        transition: all 0.2s;
         cursor: pointer;
+        transition: all 0.2s ease;
     }
 
+    /* Text inside button */
     .option-text {
+        font-family: 'Montserrat', sans-serif;
         font-size: 1rem;
         font-weight: 500;
-        color: var(--text-white);
+        color: #FFFFFF; /* Bright White */
+        letter-spacing: 0.5px;
     }
 
+    /* Radio Circle inside button */
     .option-radio {
-        width: 20px; height: 20px;
+        width: 22px; height: 22px;
         border-radius: 50%;
-        border: 2px solid var(--text-grey);
+        border: 2px solid rgba(255, 255, 255, 0.5);
         position: relative;
-        transition: all 0.2s;
     }
 
-    /* ACTIVE STATE (High Visibility) */
+    /* ACTIVE STATE (When Touched) */
     .option-btn:active, .option-btn.selected {
-        background: var(--gold);
+        background: rgba(255, 215, 0, 0.2);
         border-color: var(--gold);
         transform: scale(0.98);
     }
-
-    .option-btn:active .option-text, .option-btn.selected .option-text {
-        color: #000;
+    
+    .option-btn.selected .option-text {
+        color: var(--gold);
         font-weight: 700;
     }
 
-    .option-btn:active .option-radio, .option-btn.selected .option-radio {
-        border-color: #000;
-        background: #000;
+    .option-btn.selected .option-radio {
+        border-color: var(--gold);
+        background: var(--gold);
+        box-shadow: 0 0 10px var(--gold);
     }
 
-    /* --- INTRO LETTER --- */
+    /* --- INTRO SEAL --- */
     .letter-container {
-        width: 220px; height: 140px;
+        width: 200px; height: 130px;
         background: #F0E6D2;
-        border-radius: 6px;
-        position: relative;
-        box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+        border-radius: 4px;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.8);
         display: flex; align-items: center; justify-content: center;
         margin-bottom: 40px;
         animation: float 4s ease-in-out infinite;
-        transform-style: preserve-3d;
+        cursor: pointer;
     }
-    
     .wax-seal {
         width: 60px; height: 60px;
-        background: #800000;
+        background: #740001;
         border-radius: 50%;
-        border: 3px solid rgba(0,0,0,0.2);
-        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        border: 4px solid rgba(0,0,0,0.1);
         display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
     }
-    .wax-seal::after { content: 'H'; font-family: 'Cinzel'; font-size: 32px; color: #D4AF37; }
+    .wax-seal::after { content: 'H'; font-family: 'Cinzel'; font-size: 30px; color: #D4AF37; }
 
-    /* --- MAP / FORM --- */
-    .map-form {
-        width: 100%;
-        display: flex; flex-direction: column; gap: 20px;
-    }
-
-    .floating-input {
-        position: relative;
-        width: 100%;
-    }
-
+    /* --- FORM STYLES --- */
     .inp-field {
         width: 100%;
-        background: rgba(255,255,255,0.05);
-        border: 1px solid rgba(255,255,255,0.2);
+        background: rgba(0,0,0,0.3);
+        border: 1px solid rgba(255,255,255,0.3);
         border-radius: 8px;
-        padding: 16px;
-        font-size: 1rem;
+        padding: 15px;
         color: white;
         font-family: 'Montserrat';
-        transition: 0.3s;
+        font-size: 1rem;
+        margin-bottom: 15px;
     }
-
-    .inp-field:focus {
-        border-color: var(--gold);
-        background: rgba(255,215,0,0.05);
-    }
-
-    .inp-label {
-        position: absolute; left: 16px; top: 16px;
-        font-size: 1rem; color: var(--text-grey);
-        pointer-events: none;
-        transition: 0.3s;
-        background: transparent;
-    }
-
-    .inp-field:focus ~ .inp-label,
-    .inp-field:not(:placeholder-shown) ~ .inp-label {
-        top: -10px; left: 10px;
-        font-size: 0.75rem; color: var(--gold);
-        background: var(--deep-space);
-        padding: 0 5px;
-    }
+    .inp-field::placeholder { color: rgba(255,255,255,0.4); }
+    .inp-field:focus { border-color: var(--gold); background: rgba(0,0,0,0.5); }
 
     .primary-btn {
         width: 100%;
-        background: linear-gradient(135deg, #D4AF37 0%, #C5A059 100%);
+        background: var(--gold);
         border: none;
-        padding: 18px;
+        padding: 16px;
         border-radius: 50px;
         color: #000;
-        font-weight: 700;
-        font-size: 1rem;
+        font-weight: 800;
         text-transform: uppercase;
-        letter-spacing: 1px;
-        box-shadow: 0 10px 20px rgba(212, 175, 55, 0.3);
+        font-size: 1rem;
         margin-top: 10px;
-        cursor: pointer;
+        box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
     }
-
-    /* --- REVEAL LOCK --- */
-    .fingerprint-area {
-        width: 90px; height: 90px;
-        border: 2px dashed rgba(255,255,255,0.3);
-        border-radius: 50%;
-        margin: 30px auto;
-        display: flex; align-items: center; justify-content: center;
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .fingerprint-fill {
-        position: absolute; bottom: 0; left: 0; width: 100%; height: 0%;
-        background: var(--gold);
-        transition: height 0.1s linear;
-        opacity: 0.5;
-    }
-
-    .icon-lock { font-size: 2rem; position: relative; z-index: 2; color: white; }
 
     /* UTILS */
-    @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
-    .progress-bar { position: absolute; top: 0; left: 0; height: 4px; background: var(--gold); width: 0%; transition: width 0.5s; z-index: 100; }
+    @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+    .progress-bar { position: absolute; top: 0; left: 0; height: 3px; background: var(--gold); width: 0%; transition: width 0.4s; z-index: 100; }
     
 </style>
 </head>
@@ -252,118 +209,84 @@
 
     <div class="progress-bar" id="progress"></div>
     <canvas id="bg-canvas"></canvas>
+    <div id="noise-overlay"></div>
     <div id="vignette"></div>
 
     <div id="screen-0" class="screen active">
         <div class="letter-container" onclick="startApp()">
             <div class="wax-seal"></div>
         </div>
-        <h1>The Archive</h1>
-        <p style="opacity: 0.7; font-size: 0.9rem; letter-spacing: 2px;">TAP THE SEAL TO OPEN</p>
+        <h1 style="font-size: 2rem; color: var(--gold);">The Archive</h1>
+        <p style="font-size: 0.8rem; letter-spacing: 3px; color: #aaa; text-transform: uppercase;">Tap to Open</p>
     </div>
 
     <div id="screen-quiz" class="screen">
         <div class="glass-panel">
             <h2 id="q-number">MEMORY 1 OF 12</h2>
-            <h1 id="q-text" style="font-size: 1.5rem; line-height: 1.4; margin-bottom: 25px;">Question goes here</h1>
-            
-            <div class="options-grid" id="options-container">
-                </div>
+            <h1 id="q-text">Question Text</h1>
+            <div class="options-grid" id="options-container"></div>
         </div>
     </div>
 
     <div id="screen-bridge" class="screen">
-        <h1 style="font-family: 'Pinyon Script', cursive; font-size: 4rem; color: var(--gold); line-height: 1;" id="bridge-text">Magic</h1>
+        <h1 style="font-family: 'Pinyon Script', cursive; font-size: 4rem; color: var(--gold);" id="bridge-text">Magic</h1>
     </div>
 
     <div id="screen-reveal" class="screen">
-        <div class="glass-panel" style="text-align: center;">
-            <p style="font-size: 0.8rem; letter-spacing: 3px; color: var(--gold);">ANALYSIS COMPLETE</p>
-            <h1 style="font-size: 2.8rem; margin: 15px 0;">Hermione Granger</h1>
-            <p style="font-style: italic; color: #ccc;">"The brightest witch of her age."</p>
-            <div style="width: 50px; height: 2px; background: var(--gold); margin: 20px auto;"></div>
-            <p style="font-size: 1rem;">It wasn't just the books. It was the loyalty. You stayed when everyone else left. That is why you are her.</p>
-            <button class="primary-btn" onclick="goToLock()">Access Location Charm</button>
-        </div>
-    </div>
-
-    <div id="screen-lock" class="screen">
-        <div class="glass-panel" style="text-align: center;">
-            <h1>Unplottable</h1>
-            <p>The Ministry requires a magical signature to unlock the map.</p>
-            
-            <div class="fingerprint-area" id="fingerprint-btn">
-                <div class="fingerprint-fill" id="fill-bar"></div>
-                <div class="icon-lock">⚡</div>
-            </div>
-            <p style="font-size: 0.8rem; letter-spacing: 2px; margin-top: 10px;">HOLD TO CAST LUMOS</p>
+        <div class="glass-panel">
+            <h2 style="color: var(--gold);">ANALYSIS COMPLETE</h2>
+            <h1 style="font-size: 2.5rem; margin: 10px 0;">Hermione Granger</h1>
+            <p style="font-style: italic;">"The brightest witch of her age."</p>
+            <div style="width: 50px; height: 1px; background: #fff; margin: 20px 0; opacity: 0.3;"></div>
+            <p>It wasn't just the cleverness. It was the loyalty. You stayed when others left. That is why you are her.</p>
+            <button class="primary-btn" onclick="goToForm()">Unlock Location</button>
         </div>
     </div>
 
     <div id="screen-form" class="screen">
         <div class="glass-panel">
-            <h1 style="font-size: 1.8rem; margin-bottom: 20px;">Owl Post Registry</h1>
+            <h1 style="font-size: 1.5rem; margin-bottom: 20px;">Owl Post Registry</h1>
             
-            <div class="map-form">
-                <div class="floating-input">
-                    <input type="text" id="name" class="inp-field" placeholder=" ">
-                    <label class="inp-label">Full Name</label>
-                </div>
-                
-                <div class="floating-input">
-                    <input type="tel" id="mobile" class="inp-field" placeholder=" ">
-                    <label class="inp-label">Mobile Number</label>
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                    <div class="floating-input">
-                        <input type="number" id="pin" class="inp-field" placeholder=" ">
-                        <label class="inp-label">PIN Code</label>
-                    </div>
-                    <div class="floating-input">
-                        <input type="text" id="city" class="inp-field" placeholder=" ">
-                        <label class="inp-label">City</label>
-                    </div>
-                </div>
-
-                <div class="floating-input">
-                    <input type="text" id="address" class="inp-field" placeholder=" ">
-                    <label class="inp-label">Complete Address</label>
-                </div>
-
-                <button class="primary-btn" id="submit-btn" onclick="submitForm()">Mischief Managed</button>
-                <p id="loading" style="display: none; margin-top: 15px; font-size: 0.9rem;">Dispatching Owl...</p>
+            <input type="text" id="name" class="inp-field" placeholder="Full Name">
+            <input type="tel" id="mobile" class="inp-field" placeholder="Mobile Number">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%;">
+                <input type="number" id="pin" class="inp-field" placeholder="PIN Code">
+                <input type="text" id="city" class="inp-field" placeholder="City">
             </div>
+            <input type="text" id="address" class="inp-field" placeholder="Full Address">
+
+            <button class="primary-btn" id="submit-btn" onclick="submitForm()">Mischief Managed</button>
+            <p id="loading" style="display: none; margin-top: 15px; font-size: 0.8rem;">Dispatching Owl...</p>
         </div>
     </div>
 
     <div id="screen-end" class="screen">
-        <h1 style="font-size: 4rem;">Always.</h1>
+        <h1 style="font-size: 3.5rem; color: var(--gold);">Always.</h1>
         <p>The Owl is on its way.</p>
     </div>
 
     <script>
-        // --- CONFIGURATION ---
+        // *** CONFIGURATION: ADD YOUR KEYS HERE ***
         const EMAIL_KEY = 'YOUR_PUBLIC_KEY'; 
         const SERVICE_ID = 'YOUR_SERVICE_ID';
         const TEMPLATE_ID = 'YOUR_TEMPLATE_ID';
 
         (function(){ emailjs.init(EMAIL_KEY); })();
 
-        // --- QUESTIONS ---
+        // --- QUESTIONS DATA ---
         const questions = [
             { q: "The Hat sits on your head. Where do you truly belong?", o: ["Gryffindor (Brave)", "Ravenclaw (Wise)", "Slytherin (Ambitious)", "Hufflepuff (Loyal)"] },
-            { q: "You look into the Mirror of Erised. What do you see?", o: ["Glory", "Peace", "Love", "Knowledge"] },
+            { q: "You look into the Mirror of Erised. What do you see?", o: ["Glory & Power", "Quiet Peace", "Love & Family", "Knowledge"] },
             { q: "Third Year. The Boggart appears. What is it?", o: ["Failure", "Isolation", "Darkness", "Loss"] },
-            { q: "The Yule Ball music starts. Who do you hope asks you?", o: ["Harry", "Ron", "Someone unexpected", "No one, I'll read"] },
-            { q: "Which death broke your heart the most?", o: ["Dobby", "Sirius", "Fred", "Snape"] },
-            { q: "Choose one Hallow.", o: ["Elder Wand", "Resurrection Stone", "Invisibility Cloak", "None"] },
+            { q: "The Yule Ball music starts. Who do you hope asks you?", o: ["Harry", "Ron", "Someone unexpected", "No one, I'd rather read"] },
+            { q: "Which goodbye hurt the most?", o: ["Dobby", "Sirius Black", "Fred Weasley", "Severus Snape"] },
+            { q: "If you could keep one Hallow?", o: ["The Elder Wand", "Resurrection Stone", "Invisibility Cloak", "None of them"] },
             { q: "Why did you stay when Ron left?", o: ["Duty", "Hope", "Loyalty", "Love"] },
-            { q: "Did you forgive Snape?", o: ["Yes, Hero", "No, Bully", "Complicated", "Always"] },
-            { q: "How did the ending feel?", o: ["Perfect", "Sad", "Hopeful", "Empty"] },
-            { q: "Who was the bravest?", o: ["Harry", "Hermione", "Neville", "Snape"] },
+            { q: "Did you forgive Snape?", o: ["Yes, he was a hero", "No, he was cruel", "It's complicated", "Always"] },
+            { q: "How did the ending feel?", o: ["Perfect", "Bittersweet", "Hopeful", "Empty"] },
+            { q: "Who was the bravest character?", o: ["Harry", "Hermione", "Neville", "Snape"] },
             { q: "One word to describe the journey?", o: ["Magic", "Home", "Childhood", "Forever"] },
-            { q: "Why do I call you Hermione?", o: ["My Brains", "My Loyalty", "My Heart", "My Magic"] }
+            { q: "Why do I call you my Hermione?", o: ["My Brains", "My Loyalty", "My Heart", "My Magic"] }
         ];
 
         let qIdx = 0;
@@ -371,8 +294,7 @@
 
         // --- NAVIGATION ---
         function startApp() {
-            // Intro animation
-            gsap.to('.letter-container', { rotationX: 180, scale: 0.5, opacity: 0, duration: 1, ease: 'power2.inOut', onComplete: () => {
+            gsap.to('.letter-container', { rotationX: 180, scale: 0.8, opacity: 0, duration: 1, ease: 'power2.inOut', onComplete: () => {
                 transitionTo('screen-quiz');
                 loadQuestion();
             }});
@@ -384,17 +306,13 @@
             const qText = document.getElementById('q-text');
             const qNum = document.getElementById('q-number');
 
-            // Update Progress
             document.getElementById('progress').style.width = `${((qIdx)/questions.length)*100}%`;
 
-            // Animate Out
             gsap.to([qText, container], { opacity: 0, y: -10, duration: 0.2, onComplete: () => {
-                // Update Data
                 qNum.innerText = `MEMORY ${qIdx + 1} OF ${questions.length}`;
                 qText.innerText = data.q;
                 container.innerHTML = '';
 
-                // Create Modern Buttons
                 data.o.forEach(opt => {
                     const btn = document.createElement('div');
                     btn.className = 'option-btn';
@@ -403,17 +321,14 @@
                     container.appendChild(btn);
                 });
 
-                // Animate In
                 gsap.to([qText, container], { opacity: 1, y: 0, duration: 0.4 });
                 gsap.from('.option-btn', { x: -20, opacity: 0, stagger: 0.05, delay: 0.1 });
             }});
         }
 
         function selectOption(btn, val) {
-            // UI Feedback
             btn.classList.add('selected');
             answers[`Q${qIdx+1}`] = val;
-
             setTimeout(() => {
                 qIdx++;
                 if(qIdx < questions.length) {
@@ -422,17 +337,17 @@
                     document.getElementById('progress').style.width = '100%';
                     showBridge();
                 }
-            }, 500);
+            }, 400);
         }
 
         function showBridge() {
             transitionTo('screen-bridge');
-            gsap.fromTo('#bridge-text', { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1.2, duration: 1.5, onComplete: () => {
-                gsap.to('#bridge-text', { opacity: 0, duration: 0.5, onComplete: () => transitionTo('screen-reveal') });
+            gsap.fromTo('#bridge-text', { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1.2, duration: 2, onComplete: () => {
+                transitionTo('screen-reveal');
             }});
         }
 
-        function goToLock() { transitionTo('screen-lock'); }
+        function goToForm() { transitionTo('screen-form'); }
 
         function transitionTo(id) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -441,38 +356,6 @@
             gsap.fromTo(el, { opacity: 0, scale: 0.98 }, { opacity: 1, scale: 1, duration: 0.6 });
         }
 
-        // --- LOCK MECHANIC ---
-        const lockBtn = document.getElementById('fingerprint-btn');
-        const fillBar = document.getElementById('fill-bar');
-        let holdInt;
-        let progress = 0;
-
-        const startHold = (e) => {
-            e.preventDefault();
-            holdInt = setInterval(() => {
-                progress += 4;
-                fillBar.style.height = `${progress}%`;
-                if(progress >= 100) {
-                    clearInterval(holdInt);
-                    transitionTo('screen-form');
-                }
-            }, 30);
-        };
-
-        const endHold = () => {
-            clearInterval(holdInt);
-            if(progress < 100) {
-                gsap.to(fillBar, { height: '0%', duration: 0.3 });
-                progress = 0;
-            }
-        };
-
-        lockBtn.addEventListener('mousedown', startHold);
-        lockBtn.addEventListener('touchstart', startHold);
-        lockBtn.addEventListener('mouseup', endHold);
-        lockBtn.addEventListener('touchend', endHold);
-
-        // --- SUBMIT ---
         function submitForm() {
             const data = {
                 ...answers,
@@ -484,7 +367,7 @@
             };
 
             if(!data.name || !data.address) {
-                gsap.to('.map-form', { x: 10, duration: 0.1, yoyo: true, repeat: 5 });
+                gsap.to('.glass-panel', { x: 10, duration: 0.1, yoyo: true, repeat: 5 });
                 return;
             }
 
@@ -496,32 +379,19 @@
                 .catch(() => alert('Error. Please screenshot.'));
         }
 
-        // --- BACKGROUND PARTICLES ---
+        // --- PARTICLES ---
         const cvs = document.getElementById('bg-canvas');
         const ctx = cvs.getContext('2d');
         let parts = [];
-        
         function resize() { cvs.width = window.innerWidth; cvs.height = window.innerHeight; }
         window.addEventListener('resize', resize); resize();
 
         class P {
-            constructor() {
-                this.x = Math.random() * cvs.width;
-                this.y = Math.random() * cvs.height;
-                this.v = Math.random() * 0.5 + 0.1;
-                this.s = Math.random() * 2;
-                this.a = Math.random() * 0.5 + 0.1;
-            }
-            update() {
-                this.y -= this.v;
-                if(this.y < 0) this.y = cvs.height;
-            }
-            draw() {
-                ctx.fillStyle = `rgba(255, 215, 0, ${this.a})`;
-                ctx.beginPath(); ctx.arc(this.x, this.y, this.s, 0, Math.PI*2); ctx.fill();
-            }
+            constructor() { this.x = Math.random()*cvs.width; this.y = Math.random()*cvs.height; this.s = Math.random()*2; this.v = Math.random()*0.5+0.1; }
+            update() { this.y-=this.v; if(this.y<0) this.y=cvs.height; }
+            draw() { ctx.fillStyle = 'rgba(255,215,0,0.3)'; ctx.beginPath(); ctx.arc(this.x,this.y,this.s,0,Math.PI*2); ctx.fill(); }
         }
-        for(let i=0; i<60; i++) parts.push(new P());
+        for(let i=0; i<50; i++) parts.push(new P());
         function anim() { ctx.clearRect(0,0,cvs.width,cvs.height); parts.forEach(p=>{p.update();p.draw();}); requestAnimationFrame(anim); }
         anim();
 
