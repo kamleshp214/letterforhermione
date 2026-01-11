@@ -8,18 +8,17 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Great+Vibes&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Cormorant+Garamond:ital,wght@0,500;0,700;1,500&family=Great+Vibes&display=swap" rel="stylesheet">
 
 <style>
     /* --- 1. VARIABLES & RESET --- */
     :root {
-        --bg-deep: #080808; /* Deepest Black */
-        --card-bg: #121212; /* Solid Obsidian */
-        --gold: #D4AF37;    /* Metallic Gold */
-        --gold-dim: #8a702e;
-        --text-main: #E0E0E0;
-        --text-muted: #999;
-        --border: #333;
+        --bg-deep: #050505;
+        --card-bg: #141414; /* Solid Dark Grey, NOT transparent */
+        --gold: #FFD700;
+        --gold-dim: #C5A059;
+        --text-white: #FFFFFF; /* Pure White for max contrast */
+        --border-light: #555555;
     }
 
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; user-select: none; }
@@ -27,211 +26,173 @@
     body {
         margin: 0; padding: 0;
         background-color: var(--bg-deep);
-        color: var(--text-main);
+        color: var(--text-white);
         font-family: 'Cormorant Garamond', serif;
         height: 100dvh; width: 100vw;
         overflow: hidden;
         position: fixed;
     }
 
-    /* --- 2. ATMOSPHERE LAYERS --- */
-    #canvas-dust { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; opacity: 0.4; }
-    
-    /* Film Grain Texture for "Old Movie" feel */
-    #noise {
-        position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.04;
-        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-    }
-
-    /* Vignette to focus eyes on center */
+    /* --- 2. ATMOSPHERE --- */
+    #canvas-dust { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; opacity: 0.5; }
     #vignette {
         position: fixed; inset: 0;
-        background: radial-gradient(circle at center, transparent 30%, #000 120%);
+        background: radial-gradient(circle at center, transparent 40%, #000 120%);
         pointer-events: none; z-index: 1;
     }
 
-    /* --- 3. LAYOUT & SCREENS --- */
+    /* --- 3. LAYOUT --- */
     .screen {
         position: absolute; inset: 0;
         display: flex; flex-direction: column;
         align-items: center; justify-content: center;
-        padding: 24px;
+        padding: 20px;
         opacity: 0; visibility: hidden;
         z-index: 10;
+        transition: opacity 0.5s ease;
     }
     .screen.active { opacity: 1; visibility: visible; }
 
-    /* --- 4. TYPOGRAPHY --- */
+    /* --- 4. TEXT STYLES --- */
     h1 {
         font-family: 'Cinzel', serif;
-        font-size: 2rem;
+        font-size: 1.8rem;
         color: var(--gold);
         text-align: center;
         margin-bottom: 20px;
-        text-shadow: 0 0 15px rgba(212, 175, 55, 0.4);
         line-height: 1.3;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.8);
     }
 
     h2 {
         font-family: 'Cinzel', serif;
-        font-size: 0.85rem;
-        letter-spacing: 4px;
-        color: var(--gold-dim);
+        font-size: 0.9rem;
+        letter-spacing: 3px;
+        color: #AAAAAA; /* Light Grey */
         text-transform: uppercase;
-        margin-bottom: 30px;
-        border-bottom: 1px solid var(--border);
+        margin-bottom: 25px;
+        border-bottom: 1px solid #333;
         padding-bottom: 10px;
         display: inline-block;
     }
 
     p {
-        font-size: 1.3rem;
-        line-height: 1.6;
+        font-size: 1.2rem;
+        line-height: 1.5;
         text-align: center;
-        color: #ddd;
-        max-width: 500px;
+        color: #DDDDDD; /* Very Light Grey */
         margin-bottom: 30px;
     }
 
-    .script {
-        font-family: 'Great Vibes', cursive;
-        font-size: 3.5rem;
-        color: var(--gold);
-        line-height: 1;
-    }
-
-    /* --- 5. COMPONENT: THE ARTIFACT CARD --- */
-    /* This creates a solid, high-contrast container for text */
+    /* --- 5. THE CARD (SOLID & VISIBLE) --- */
     .artifact-card {
-        background: var(--card-bg);
+        background: var(--card-bg); /* Solid color */
         border: 1px solid var(--gold-dim);
-        box-shadow: 0 0 0 4px rgba(0,0,0,0.5), 0 20px 50px rgba(0,0,0,0.9);
-        border-radius: 4px; /* Slightly sharp corners for book feel */
-        padding: 40px 24px;
+        border-radius: 8px;
+        padding: 30px 20px;
         width: 100%; max-width: 450px;
         display: flex; flex-direction: column; align-items: center;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.9);
         position: relative;
-    }
-    
-    /* Magical Corner Accents */
-    .artifact-card::before, .artifact-card::after {
-        content: ''; position: absolute; width: 100%; height: 100%; top: 0; left: 0;
-        pointer-events: none;
-        background: 
-            linear-gradient(to right, var(--gold) 1px, transparent 1px) 0 0,
-            linear-gradient(to bottom, var(--gold) 1px, transparent 1px) 0 0,
-            linear-gradient(to left, var(--gold) 1px, transparent 1px) 100% 0,
-            linear-gradient(to bottom, var(--gold) 1px, transparent 1px) 100% 0,
-            linear-gradient(to left, var(--gold) 1px, transparent 1px) 100% 100%,
-            linear-gradient(to top, var(--gold) 1px, transparent 1px) 100% 100%,
-            linear-gradient(to right, var(--gold) 1px, transparent 1px) 0 100%,
-            linear-gradient(to top, var(--gold) 1px, transparent 1px) 0 100%;
-        background-size: 10px 10px;
-        background-repeat: no-repeat;
-        opacity: 0.6;
+        z-index: 20;
     }
 
-    /* --- 6. BUTTONS & INPUTS --- */
+    /* --- 6. BUTTONS (HIGH CONTRAST) --- */
     .options-list { width: 100%; display: flex; flex-direction: column; gap: 12px; }
 
     .choice-btn {
         width: 100%;
-        background: #1A1A1A; /* Solid Dark Grey */
-        border: 1px solid #444;
-        padding: 18px 20px;
-        border-radius: 2px;
+        background-color: rgba(255, 255, 255, 0.08); /* Slight white tint for visibility */
+        border: 1px solid var(--border-light); /* Visible Grey Border */
+        padding: 16px;
+        border-radius: 4px;
         display: flex; align-items: center; justify-content: space-between;
         cursor: pointer;
         transition: all 0.2s;
     }
-    
+
     .choice-text {
         font-family: 'Cormorant Garamond', serif;
         font-size: 1.2rem;
-        font-weight: 600;
-        color: #fff;
+        font-weight: 700; /* Bold */
+        color: #FFFFFF; /* PURE WHITE */
+        letter-spacing: 0.5px;
     }
 
     .choice-marker {
-        width: 16px; height: 16px;
-        border: 1px solid #666;
+        width: 18px; height: 18px;
+        border: 2px solid #888;
         border-radius: 50%;
-        transition: 0.2s;
         position: relative;
     }
 
-    /* Selected State */
+    /* Active State */
     .choice-btn.active {
-        background: #252010; /* Very dark gold tint */
+        background-color: rgba(212, 175, 55, 0.15); /* Gold Tint */
         border-color: var(--gold);
-        transform: scale(0.99);
+        transform: scale(0.98);
     }
     .choice-btn.active .choice-text { color: var(--gold); }
-    .choice-btn.active .choice-marker { border-color: var(--gold); background: var(--gold); box-shadow: 0 0 10px var(--gold); }
+    .choice-btn.active .choice-marker { border-color: var(--gold); background: var(--gold); }
 
-    /* FORM INPUTS - REGISTRY STYLE */
+    /* --- 7. FORM INPUTS --- */
     .registry-input {
         width: 100%;
-        background: transparent;
-        border: none;
-        border-bottom: 1px solid #555;
-        padding: 12px 0;
-        color: var(--gold);
+        background: #1A1A1A; /* Dark Grey Input Background */
+        border: 1px solid #444;
+        padding: 14px;
+        color: #FFF;
         font-family: 'Cormorant Garamond', serif;
-        font-size: 1.3rem;
-        margin-bottom: 25px;
-        border-radius: 0;
+        font-size: 1.1rem;
+        margin-bottom: 15px;
+        border-radius: 4px;
     }
-    .registry-input::placeholder { color: #555; font-style: italic; }
-    .registry-input:focus { border-bottom-color: var(--gold); outline: none; }
+    .registry-input:focus { border-color: var(--gold); outline: none; background: #222; }
+    .registry-input::placeholder { color: #888; }
 
     .action-btn {
         background: var(--gold);
-        color: #050505;
+        color: #000;
         border: none;
-        padding: 16px 40px;
+        padding: 16px 30px;
         font-family: 'Cinzel', serif;
         font-weight: 700;
         font-size: 1rem;
         text-transform: uppercase;
-        letter-spacing: 2px;
         border-radius: 2px;
-        margin-top: 15px;
-        cursor: pointer;
-        box-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
-        transition: 0.3s;
+        margin-top: 10px;
+        width: 100%;
+        box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
     }
-    .action-btn:active { transform: scale(0.96); opacity: 0.9; }
 
-    /* --- 7. INTRO ENVELOPE --- */
+    /* --- 8. INTRO ENVELOPE --- */
     .envelope-stage {
-        width: 260px; height: 170px;
+        width: 240px; height: 160px;
         perspective: 1000px;
         cursor: pointer;
         margin-bottom: 40px;
     }
     .envelope-body {
         width: 100%; height: 100%;
-        background: #D8C8B0; /* Parchment */
+        background: #dcd0ba; /* Parchment */
         border-radius: 4px;
         position: relative;
         transform-style: preserve-3d;
-        animation: float 5s ease-in-out infinite;
-        box-shadow: 0 25px 50px rgba(0,0,0,0.7);
+        animation: float 4s ease-in-out infinite;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.8);
         display: flex; align-items: center; justify-content: center;
     }
     .wax-seal {
-        width: 70px; height: 70px;
-        background: #740001; /* Burgundy */
+        width: 65px; height: 65px;
+        background: #740001;
         border-radius: 50%;
         display: flex; align-items: center; justify-content: center;
-        border: 4px solid rgba(0,0,0,0.1);
-        box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+        border: 3px solid rgba(0,0,0,0.1);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
     }
-    .wax-seal::after { content: 'H'; font-family: 'Cinzel'; font-size: 36px; color: #C5A059; }
+    .wax-seal::after { content: 'H'; font-family: 'Cinzel'; font-size: 32px; color: #C5A059; }
 
-    /* UTILS */
-    @keyframes float { 0%, 100% { transform: translateY(0) rotateX(0); } 50% { transform: translateY(-12px) rotateX(5deg); } }
+    @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
     .progress-bar { position: absolute; top: 0; left: 0; height: 3px; background: var(--gold); width: 0%; transition: width 0.5s; z-index: 100; }
 
 </style>
@@ -240,7 +201,6 @@
 
     <div class="progress-bar" id="progress"></div>
     <canvas id="canvas-dust"></canvas>
-    <div id="noise"></div>
     <div id="vignette"></div>
 
     <div id="screen-intro" class="screen active">
@@ -250,62 +210,53 @@
             </div>
         </div>
         <h1>The Archive</h1>
-        <p style="font-size: 0.9rem; letter-spacing: 3px; color: var(--gold-dim); text-transform: uppercase;">Tap Seal to Open</p>
+        <p style="font-size: 0.8rem; letter-spacing: 3px; color: #888; text-transform: uppercase;">Tap Seal to Open</p>
     </div>
 
     <div id="screen-quiz" class="screen">
         <div class="artifact-card">
             <h2 id="q-counter">Memory 1 of 12</h2>
-            <h1 id="q-text" style="font-size: 1.6rem; margin-bottom: 30px;">Question Text</h1>
-            <div class="options-list" id="options-container">
-                </div>
+            <h1 id="q-text">Question Text</h1>
+            <div class="options-list" id="options-container"></div>
         </div>
     </div>
 
     <div id="screen-bridge" class="screen">
-        <div style="text-align: center;">
-            <span class="script" id="bridge-text" style="opacity: 0;">Magic</span>
-        </div>
+        <h1 style="font-family: 'Great Vibes', cursive; font-size: 4rem; color: var(--gold); opacity: 0;" id="bridge-text">Magic</h1>
     </div>
 
     <div id="screen-reveal" class="screen">
         <div class="artifact-card" style="text-align: center;">
-            <h2 style="border-bottom: none; margin-bottom: 10px;">Identity Confirmed</h2>
-            <h1 style="font-size: 2.8rem; margin: 0 0 20px 0;">Hermione Granger</h1>
-            
-            <div style="text-align: left; padding: 0 10px;">
-                <p class="fade-text" style="text-align: left; margin-bottom: 15px;">It isn't just the books or the cleverness.</p>
-                <p class="fade-text" style="text-align: left; margin-bottom: 15px;">It is the fire. The loyalty that never wavered.</p>
-                <p class="fade-text" style="text-align: left; margin-bottom: 25px; color: var(--gold);">When the world went dark, you were the light. That is why you are her.</p>
-            </div>
-
+            <h2 style="border:none;">Identity Confirmed</h2>
+            <h1 style="font-size: 2.5rem; margin-bottom: 10px;">Hermione Granger</h1>
+            <p style="font-style: italic; color: #BBB;">"The brightest witch of her age."</p>
+            <div style="width: 50px; height: 1px; background: #555; margin: 15px auto;"></div>
+            <p style="color: #FFF;">It wasn't just the books. It was the loyalty. When the world went dark, you stayed. That is why you are her.</p>
             <button class="action-btn" onclick="goToForm()">Open Registry</button>
         </div>
     </div>
 
     <div id="screen-form" class="screen">
         <div class="artifact-card">
-            <h2>Owl Post Designation</h2>
-            <p style="font-size: 0.9rem; margin-bottom: 25px; font-style: italic;">The Ministry requires precise coordinates for delivery.</p>
+            <h2>Owl Post Registry</h2>
+            <p style="font-size: 0.9rem; margin-bottom: 20px; color: #aaa;">The Ministry requires precise coordinates.</p>
             
-            <input type="text" id="name" class="registry-input" placeholder="Witch's Name">
-            <input type="tel" id="mobile" class="registry-input" placeholder="Magical Signature (Mobile)">
-            
-            <div style="display: flex; gap: 15px; width: 100%;">
-                <input type="number" id="pin" class="registry-input" placeholder="Zone Code (PIN)">
-                <input type="text" id="city" class="registry-input" placeholder="Stronghold (City)">
+            <input type="text" id="name" class="registry-input" placeholder="Full Name">
+            <input type="tel" id="mobile" class="registry-input" placeholder="Mobile Number">
+            <div style="display: flex; gap: 10px; width: 100%;">
+                <input type="number" id="pin" class="registry-input" placeholder="PIN Code">
+                <input type="text" id="city" class="registry-input" placeholder="City">
             </div>
-            
-            <input type="text" id="address" class="registry-input" placeholder="Apparition Point (Full Address)">
+            <input type="text" id="address" class="registry-input" placeholder="Full Address">
 
             <button class="action-btn" id="submit-btn" onclick="submitRegistry()">Mischief Managed</button>
-            <p id="loading" style="display: none; color: var(--gold); margin-top: 15px; font-size: 0.9rem;">The Owl is taking flight...</p>
+            <p id="loading" style="display: none; color: var(--gold); margin-top: 15px;">Dispatching Owl...</p>
         </div>
     </div>
 
     <div id="screen-end" class="screen">
-        <h1 style="font-size: 4rem;">Always.</h1>
-        <p style="font-style: italic; opacity: 0.7;">Your letter is on its way.</p>
+        <h1 style="font-size: 3.5rem;">Always.</h1>
+        <p>The letter is on its way.</p>
     </div>
 
     <script>
@@ -316,12 +267,12 @@
 
         (function(){ emailjs.init(EMAIL_KEY); })();
 
-        // --- DATA: 12 QUESTIONS ---
+        // --- DATA ---
         const questions = [
-            { q: "The Sorting Hat touches your head. Where do you belong?", o: ["Gryffindor (Brave)", "Ravenclaw (Wise)", "Slytherin (Ambitious)", "Hufflepuff (Loyal)"] },
+            { q: "The Hat sits on your head. Where do you belong?", o: ["Gryffindor (Brave)", "Ravenclaw (Wise)", "Slytherin (Ambitious)", "Hufflepuff (Loyal)"] },
             { q: "You look into the Mirror of Erised. What do you see?", o: ["Glory", "Peace", "Love", "Knowledge"] },
-            { q: "The Boggart steps out. What does it become?", o: ["Failure", "Isolation", "Darkness", "Loss"] },
-            { q: "The Yule Ball music starts. Who do you hope asks you?", o: ["The Hero", "The Best Friend", "Someone Unexpected", "No one, I'd rather read"] },
+            { q: "The Boggart steps out. What is it?", o: ["Failure", "Isolation", "Darkness", "Loss"] },
+            { q: "The Yule Ball music starts. Who do you hope asks you?", o: ["Harry", "Ron", "Someone unexpected", "No one, I'd rather read"] },
             { q: "Which loss broke your heart the most?", o: ["Dobby", "Sirius Black", "Fred Weasley", "Severus Snape"] },
             { q: "If you could keep one Hallow?", o: ["The Elder Wand", "Resurrection Stone", "Invisibility Cloak", "None"] },
             { q: "Why did you stay when Ron left?", o: ["Duty", "Hope", "Loyalty", "Love"] },
@@ -335,22 +286,19 @@
         let qIdx = 0;
         let answers = {};
 
-        // --- TRANSITIONS ---
+        // --- LOGIC ---
         function transition(fromID, toID, callback) {
             const from = document.getElementById(fromID);
             const to = document.getElementById(toID);
-            
-            gsap.to(from, { opacity: 0, scale: 0.95, duration: 0.5, ease: "power2.in", onComplete: () => {
+            gsap.to(from, { opacity: 0, scale: 0.95, duration: 0.4, onComplete: () => {
                 from.classList.remove('active');
                 to.classList.add('active');
-                gsap.fromTo(to, { opacity: 0, scale: 1.05 }, { opacity: 1, scale: 1, duration: 0.8, ease: "power2.out", onComplete: callback });
+                gsap.fromTo(to, { opacity: 0, scale: 1.05 }, { opacity: 1, scale: 1, duration: 0.5, onComplete: callback });
             }});
         }
 
-        // --- LOGIC ---
         function startExperience() {
-            // Intro Animation
-            gsap.to('.envelope-body', { rotateX: 180, scale: 0.5, opacity: 0, duration: 1.2, onComplete: () => {
+            gsap.to('.envelope-body', { rotateX: 180, scale: 0.5, opacity: 0, duration: 1, onComplete: () => {
                 transition('screen-intro', 'screen-quiz', loadQuestion);
             }});
         }
@@ -361,17 +309,13 @@
             const qText = document.getElementById('q-text');
             const qCount = document.getElementById('q-counter');
 
-            // Progress Bar
-            gsap.to('#progress', { width: `${((qIdx)/questions.length)*100}%`, duration: 0.5 });
+            gsap.to('#progress', { width: `${((qIdx)/questions.length)*100}%` });
 
-            // Fade Out Content
             gsap.to([qText, container], { opacity: 0, y: -10, duration: 0.2, onComplete: () => {
-                // Update Content
                 qCount.innerText = `Memory ${qIdx + 1} of 12`;
                 qText.innerText = data.q;
                 container.innerHTML = '';
 
-                // Create High-Contrast Buttons
                 data.o.forEach(opt => {
                     const btn = document.createElement('div');
                     btn.className = 'choice-btn';
@@ -380,16 +324,14 @@
                     container.appendChild(btn);
                 });
 
-                // Fade In Content
                 gsap.to([qText, container], { opacity: 1, y: 0, duration: 0.4 });
-                gsap.from('.choice-btn', { x: -20, opacity: 0, stagger: 0.05, delay: 0.1 });
+                gsap.from('.choice-btn', { x: -10, opacity: 0, stagger: 0.05, delay: 0.1 });
             }});
         }
 
         function selectOption(btn, val) {
             btn.classList.add('active');
             answers[`Q${qIdx+1}`] = val;
-            
             setTimeout(() => {
                 qIdx++;
                 if(qIdx < questions.length) {
@@ -398,20 +340,14 @@
                     gsap.to('#progress', { width: '100%' });
                     showBridge();
                 }
-            }, 400);
+            }, 300);
         }
 
         function showBridge() {
             transition('screen-quiz', 'screen-bridge');
-            gsap.fromTo('#bridge-text', { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1.2, duration: 2.5, ease: "power1.inOut", onComplete: () => {
-                gsap.to('#bridge-text', { opacity: 0, duration: 0.5, onComplete: showReveal });
+            gsap.to('#bridge-text', { opacity: 1, duration: 1.5, onComplete: () => {
+                setTimeout(() => transition('screen-bridge', 'screen-reveal'), 1000);
             }});
-        }
-
-        function showReveal() {
-            transition('screen-bridge', 'screen-reveal', () => {
-                gsap.fromTo('.fade-text', { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 1, stagger: 1.5 });
-            });
         }
 
         function goToForm() { transition('screen-reveal', 'screen-form'); }
@@ -436,24 +372,22 @@
 
             emailjs.send(SERVICE_ID, TEMPLATE_ID, data)
                 .then(() => transition('screen-form', 'screen-end'))
-                .catch(() => alert('The Owl is confused. Please screenshot your answers.'));
+                .catch(() => alert('The Owl is confused. Please screenshot.'));
         }
 
-        // --- BACKGROUND DUST ---
+        // --- BACKGROUND ---
         const cvs = document.getElementById('canvas-dust');
         const ctx = cvs.getContext('2d');
         let parts = [];
-        
         function resize() { cvs.width = window.innerWidth; cvs.height = window.innerHeight; }
         window.addEventListener('resize', resize); resize();
-
         class P {
-            constructor() { this.x = Math.random()*cvs.width; this.y = Math.random()*cvs.height; this.v = Math.random()*0.3+0.1; this.s = Math.random()*1.5; }
-            update() { this.y -= this.v; if(this.y < 0) this.y = cvs.height; }
-            draw() { ctx.fillStyle = 'rgba(212, 175, 55, 0.5)'; ctx.beginPath(); ctx.arc(this.x, this.y, this.s, 0, Math.PI*2); ctx.fill(); }
+            constructor() { this.x=Math.random()*cvs.width; this.y=Math.random()*cvs.height; this.v=Math.random()*0.3+0.1; this.s=Math.random()*1.5; }
+            update() { this.y-=this.v; if(this.y<0) this.y=cvs.height; }
+            draw() { ctx.fillStyle='rgba(212,175,55,0.4)'; ctx.beginPath(); ctx.arc(this.x,this.y,this.s,0,Math.PI*2); ctx.fill(); }
         }
-        for(let i=0; i<60; i++) parts.push(new P());
-        function anim() { ctx.clearRect(0,0,cvs.width,cvs.height); parts.forEach(p=>{p.update();p.draw();}); requestAnimationFrame(anim); }
+        for(let i=0;i<60;i++) parts.push(new P());
+        function anim(){ ctx.clearRect(0,0,cvs.width,cvs.height); parts.forEach(p=>{p.update();p.draw();}); requestAnimationFrame(anim); }
         anim();
 
     </script>
