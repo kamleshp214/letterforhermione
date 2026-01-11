@@ -3,283 +3,272 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>The Archive</title>
+<title>Mischief Managed</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Cormorant+Garamond:ital,wght@0,500;0,700;1,500&family=Great+Vibes&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600&family=Mr+De+Haviland&display=swap" rel="stylesheet">
 
 <style>
-    /* --- 1. VARIABLES & RESET --- */
     :root {
-        --bg-deep: #050505;
-        --card-bg: #141414; /* Solid Dark Grey, NOT transparent */
-        --gold: #FFD700;
-        --gold-dim: #C5A059;
-        --text-white: #FFFFFF; /* Pure White for max contrast */
-        --border-light: #555555;
+        --paper: #F2E8C9; /* Warm Parchment */
+        --ink: #2A1B0E;    /* Deep Sepia Ink */
+        --ink-light: #5C4033;
+        --burgundy: #740001;
+        --gold: #D4AF37;
     }
 
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; user-select: none; }
 
     body {
         margin: 0; padding: 0;
-        background-color: var(--bg-deep);
-        color: var(--text-white);
+        background-color: var(--paper);
+        color: var(--ink);
         font-family: 'Cormorant Garamond', serif;
         height: 100dvh; width: 100vw;
         overflow: hidden;
         position: fixed;
     }
 
-    /* --- 2. ATMOSPHERE --- */
-    #canvas-dust { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; opacity: 0.5; }
-    #vignette {
+    /* --- BACKGROUND TEXTURE --- */
+    #paper-texture {
         position: fixed; inset: 0;
-        background: radial-gradient(circle at center, transparent 40%, #000 120%);
-        pointer-events: none; z-index: 1;
+        background-image: url("https://www.transparenttextures.com/patterns/aged-paper.png");
+        opacity: 0.8; z-index: -1;
+    }
+    
+    #map-overlay {
+        position: fixed; inset: 0; z-index: -1; opacity: 0.1;
+        background: repeating-linear-gradient(45deg, #2A1B0E 0, #2A1B0E 1px, transparent 0, transparent 50%);
+        background-size: 20px 20px;
+        mask-image: radial-gradient(circle, transparent 30%, black 100%);
     }
 
-    /* --- 3. LAYOUT --- */
+    /* --- LAYOUT --- */
     .screen {
         position: absolute; inset: 0;
         display: flex; flex-direction: column;
         align-items: center; justify-content: center;
-        padding: 20px;
+        padding: 24px;
         opacity: 0; visibility: hidden;
         z-index: 10;
-        transition: opacity 0.5s ease;
+        transition: opacity 0.6s ease;
     }
     .screen.active { opacity: 1; visibility: visible; }
 
-    /* --- 4. TEXT STYLES --- */
+    /* --- TYPOGRAPHY (Handwritten & Bold) --- */
     h1 {
         font-family: 'Cinzel', serif;
-        font-size: 1.8rem;
-        color: var(--gold);
+        font-size: 2.2rem;
+        color: var(--ink);
         text-align: center;
-        margin-bottom: 20px;
-        line-height: 1.3;
-        text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        margin-bottom: 10px;
+        border-bottom: 2px solid var(--ink);
+        padding-bottom: 10px;
     }
 
-    h2 {
-        font-family: 'Cinzel', serif;
-        font-size: 0.9rem;
-        letter-spacing: 3px;
-        color: #AAAAAA; /* Light Grey */
-        text-transform: uppercase;
-        margin-bottom: 25px;
-        border-bottom: 1px solid #333;
-        padding-bottom: 10px;
-        display: inline-block;
+    .handwritten {
+        font-family: 'Mr De Haviland', cursive;
+        font-size: 3.5rem;
+        color: var(--burgundy);
+        line-height: 0.8;
+        transform: rotate(-5deg);
+        margin: 10px 0;
     }
 
     p {
-        font-size: 1.2rem;
-        line-height: 1.5;
+        font-size: 1.4rem;
+        font-weight: 600;
         text-align: center;
-        color: #DDDDDD; /* Very Light Grey */
+        color: var(--ink-light);
         margin-bottom: 30px;
+        line-height: 1.4;
     }
 
-    /* --- 5. THE CARD (SOLID & VISIBLE) --- */
-    .artifact-card {
-        background: var(--card-bg); /* Solid color */
-        border: 1px solid var(--gold-dim);
-        border-radius: 8px;
-        padding: 30px 20px;
+    /* --- COMPONENT: THE INK CARD --- */
+    .ink-card {
         width: 100%; max-width: 450px;
-        display: flex; flex-direction: column; align-items: center;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.9);
+        background: rgba(242, 232, 201, 0.9);
+        border: 2px solid var(--ink);
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 10px 10px 0px rgba(42, 27, 14, 0.1); /* Ink Shadow */
         position: relative;
-        z-index: 20;
     }
 
-    /* --- 6. BUTTONS (HIGH CONTRAST) --- */
-    .options-list { width: 100%; display: flex; flex-direction: column; gap: 12px; }
+    /* Corners */
+    .ink-card::before {
+        content: ''; position: absolute; inset: 4px;
+        border: 1px solid var(--ink);
+        pointer-events: none;
+    }
 
-    .choice-btn {
+    /* --- COMPONENT: OPTIONS (INK STAMPS) --- */
+    .options-stack { display: flex; flex-direction: column; gap: 15px; width: 100%; }
+
+    .ink-btn {
         width: 100%;
-        background-color: rgba(255, 255, 255, 0.08); /* Slight white tint for visibility */
-        border: 1px solid var(--border-light); /* Visible Grey Border */
-        padding: 16px;
-        border-radius: 4px;
-        display: flex; align-items: center; justify-content: space-between;
+        background: transparent;
+        border: 2px solid var(--ink);
+        padding: 18px;
+        display: flex; align-items: center; justify-content: center;
         cursor: pointer;
-        transition: all 0.2s;
-    }
-
-    .choice-text {
-        font-family: 'Cormorant Garamond', serif;
-        font-size: 1.2rem;
-        font-weight: 700; /* Bold */
-        color: #FFFFFF; /* PURE WHITE */
-        letter-spacing: 0.5px;
-    }
-
-    .choice-marker {
-        width: 18px; height: 18px;
-        border: 2px solid #888;
-        border-radius: 50%;
+        transition: 0.2s;
         position: relative;
+        overflow: hidden;
     }
 
-    /* Active State */
-    .choice-btn.active {
-        background-color: rgba(212, 175, 55, 0.15); /* Gold Tint */
-        border-color: var(--gold);
-        transform: scale(0.98);
-    }
-    .choice-btn.active .choice-text { color: var(--gold); }
-    .choice-btn.active .choice-marker { border-color: var(--gold); background: var(--gold); }
-
-    /* --- 7. FORM INPUTS --- */
-    .registry-input {
-        width: 100%;
-        background: #1A1A1A; /* Dark Grey Input Background */
-        border: 1px solid #444;
-        padding: 14px;
-        color: #FFF;
-        font-family: 'Cormorant Garamond', serif;
-        font-size: 1.1rem;
-        margin-bottom: 15px;
-        border-radius: 4px;
-    }
-    .registry-input:focus { border-color: var(--gold); outline: none; background: #222; }
-    .registry-input::placeholder { color: #888; }
-
-    .action-btn {
-        background: var(--gold);
-        color: #000;
-        border: none;
-        padding: 16px 30px;
-        font-family: 'Cinzel', serif;
+    .btn-text {
+        font-size: 1.3rem;
         font-weight: 700;
-        font-size: 1rem;
         text-transform: uppercase;
-        border-radius: 2px;
-        margin-top: 10px;
+        letter-spacing: 1px;
+        color: var(--ink);
+        z-index: 2;
+    }
+
+    /* Selection Effect: Ink Blot */
+    .ink-btn::after {
+        content: ''; position: absolute; inset: 0;
+        background: var(--ink);
+        transform: scaleX(0); transform-origin: left;
+        transition: transform 0.3s cubic-bezier(0.7, 0, 0.3, 1);
+        z-index: 1;
+    }
+
+    .ink-btn.active::after { transform: scaleX(1); }
+    .ink-btn.active .btn-text { color: var(--paper); }
+
+    /* --- FOOTSTEPS ANIMATION --- */
+    .footstep {
+        position: fixed;
+        font-size: 24px;
+        color: var(--ink);
+        opacity: 0;
+        pointer-events: none;
+        z-index: 5;
+    }
+
+    /* --- FORM --- */
+    .form-line {
         width: 100%;
-        box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
+        border: none;
+        background: transparent;
+        border-bottom: 2px solid var(--ink);
+        padding: 12px 0;
+        font-family: 'Cormorant Garamond', serif;
+        font-size: 1.5rem;
+        color: var(--ink);
+        font-weight: 700;
+        margin-bottom: 20px;
+    }
+    .form-line::placeholder { color: rgba(42, 27, 14, 0.4); font-style: italic; }
+    .form-line:focus { border-bottom-color: var(--burgundy); }
+
+    .confirm-btn {
+        background: var(--burgundy);
+        color: var(--paper);
+        font-family: 'Cinzel', serif;
+        font-size: 1.2rem;
+        padding: 18px;
+        width: 100%;
+        border: none;
+        margin-top: 10px;
+        box-shadow: 5px 5px 0 rgba(0,0,0,0.2);
     }
 
-    /* --- 8. INTRO ENVELOPE --- */
-    .envelope-stage {
-        width: 240px; height: 160px;
-        perspective: 1000px;
-        cursor: pointer;
-        margin-bottom: 40px;
+    /* --- UTILS --- */
+    .progress-ink {
+        position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+        font-family: 'Cinzel'; font-size: 0.9rem; color: var(--ink-light);
+        opacity: 0.6;
     }
-    .envelope-body {
-        width: 100%; height: 100%;
-        background: #dcd0ba; /* Parchment */
-        border-radius: 4px;
-        position: relative;
-        transform-style: preserve-3d;
-        animation: float 4s ease-in-out infinite;
-        box-shadow: 0 20px 60px rgba(0,0,0,0.8);
-        display: flex; align-items: center; justify-content: center;
-    }
-    .wax-seal {
-        width: 65px; height: 65px;
-        background: #740001;
-        border-radius: 50%;
-        display: flex; align-items: center; justify-content: center;
-        border: 3px solid rgba(0,0,0,0.1);
-        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-    }
-    .wax-seal::after { content: 'H'; font-family: 'Cinzel'; font-size: 32px; color: #C5A059; }
-
-    @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
-    .progress-bar { position: absolute; top: 0; left: 0; height: 3px; background: var(--gold); width: 0%; transition: width 0.5s; z-index: 100; }
 
 </style>
 </head>
 <body>
 
-    <div class="progress-bar" id="progress"></div>
-    <canvas id="canvas-dust"></canvas>
-    <div id="vignette"></div>
+    <div id="paper-texture"></div>
+    <div id="map-overlay"></div>
 
     <div id="screen-intro" class="screen active">
-        <div class="envelope-stage" onclick="startExperience()">
-            <div class="envelope-body">
-                <div class="wax-seal"></div>
-            </div>
+        <h1 style="border:none; font-size: 1.5rem;">The Archive</h1>
+        <div class="ink-card" style="text-align: center; padding: 40px;" onclick="startApp()">
+            <p style="font-size: 1.6rem; color: var(--ink); margin: 0;">Tap to Reveal</p>
+            <div class="handwritten" style="font-size: 4rem; margin-top: 20px;">I solemnly swear...</div>
         </div>
-        <h1>The Archive</h1>
-        <p style="font-size: 0.8rem; letter-spacing: 3px; color: #888; text-transform: uppercase;">Tap Seal to Open</p>
     </div>
 
     <div id="screen-quiz" class="screen">
-        <div class="artifact-card">
-            <h2 id="q-counter">Memory 1 of 12</h2>
-            <h1 id="q-text">Question Text</h1>
-            <div class="options-list" id="options-container"></div>
+        <h2 id="q-counter" class="progress-ink">PAGE 1 / 12</h2>
+        <div class="ink-card">
+            <h1 id="q-text" style="border:none; font-size: 1.6rem; margin-bottom: 30px;">Question</h1>
+            <div class="options-stack" id="options-container"></div>
         </div>
     </div>
 
     <div id="screen-bridge" class="screen">
-        <h1 style="font-family: 'Great Vibes', cursive; font-size: 4rem; color: var(--gold); opacity: 0;" id="bridge-text">Magic</h1>
+        <div class="handwritten" id="bridge-text" style="font-size: 6rem; opacity: 0;">Magic</div>
     </div>
 
     <div id="screen-reveal" class="screen">
-        <div class="artifact-card" style="text-align: center;">
-            <h2 style="border:none;">Identity Confirmed</h2>
-            <h1 style="font-size: 2.5rem; margin-bottom: 10px;">Hermione Granger</h1>
-            <p style="font-style: italic; color: #BBB;">"The brightest witch of her age."</p>
-            <div style="width: 50px; height: 1px; background: #555; margin: 15px auto;"></div>
-            <p style="color: #FFF;">It wasn't just the books. It was the loyalty. When the world went dark, you stayed. That is why you are her.</p>
-            <button class="action-btn" onclick="goToForm()">Open Registry</button>
+        <div class="ink-card" style="text-align: center;">
+            <p style="text-transform: uppercase; font-size: 0.9rem; letter-spacing: 2px;">Identity Verified</p>
+            <h1 style="font-size: 2.5rem; border-bottom: 2px double var(--ink); padding-bottom: 15px;">Hermione Granger</h1>
+            <p style="margin-top: 20px;">It wasn't just the books. It was the loyalty. You stayed when everyone else left.</p>
+            <div class="handwritten" style="font-size: 3rem;">That is why.</div>
+            <button class="confirm-btn" onclick="goToForm()">Open Registry</button>
         </div>
     </div>
 
     <div id="screen-form" class="screen">
-        <div class="artifact-card">
-            <h2>Owl Post Registry</h2>
-            <p style="font-size: 0.9rem; margin-bottom: 20px; color: #aaa;">The Ministry requires precise coordinates.</p>
+        <div class="ink-card">
+            <h1 style="font-size: 1.8rem; margin-bottom: 20px;">Owl Post Registry</h1>
             
-            <input type="text" id="name" class="registry-input" placeholder="Full Name">
-            <input type="tel" id="mobile" class="registry-input" placeholder="Mobile Number">
-            <div style="display: flex; gap: 10px; width: 100%;">
-                <input type="number" id="pin" class="registry-input" placeholder="PIN Code">
-                <input type="text" id="city" class="registry-input" placeholder="City">
+            <input type="text" id="name" class="form-line" placeholder="Witch's Name">
+            <input type="tel" id="mobile" class="form-line" placeholder="Mobile Number">
+            <div style="display: flex; gap: 15px;">
+                <input type="number" id="pin" class="form-line" placeholder="PIN">
+                <input type="text" id="city" class="form-line" placeholder="City">
             </div>
-            <input type="text" id="address" class="registry-input" placeholder="Full Address">
+            <input type="text" id="address" class="form-line" placeholder="Full Address">
 
-            <button class="action-btn" id="submit-btn" onclick="submitRegistry()">Mischief Managed</button>
-            <p id="loading" style="display: none; color: var(--gold); margin-top: 15px;">Dispatching Owl...</p>
+            <button class="confirm-btn" id="submit-btn" onclick="submitForm()">Mischief Managed</button>
+            <p id="loading" style="display: none; text-align: center; margin-top: 15px;">Owl taking flight...</p>
         </div>
     </div>
 
     <div id="screen-end" class="screen">
-        <h1 style="font-size: 3.5rem;">Always.</h1>
-        <p>The letter is on its way.</p>
+        <div class="handwritten" style="font-size: 5rem;">Always.</div>
+        <p>The Owl is on its way.</p>
     </div>
 
+    <div id="footsteps-layer"></div>
+
     <script>
-        // *** CONFIGURATION: PASTE KEYS HERE ***
+        // *** CONFIGURATION: ADD KEYS HERE ***
         const EMAIL_KEY = 'YOUR_PUBLIC_KEY'; 
         const SERVICE_ID = 'YOUR_SERVICE_ID';
         const TEMPLATE_ID = 'YOUR_TEMPLATE_ID';
 
         (function(){ emailjs.init(EMAIL_KEY); })();
 
-        // --- DATA ---
+        // --- QUESTIONS ---
         const questions = [
-            { q: "The Hat sits on your head. Where do you belong?", o: ["Gryffindor (Brave)", "Ravenclaw (Wise)", "Slytherin (Ambitious)", "Hufflepuff (Loyal)"] },
-            { q: "You look into the Mirror of Erised. What do you see?", o: ["Glory", "Peace", "Love", "Knowledge"] },
-            { q: "The Boggart steps out. What is it?", o: ["Failure", "Isolation", "Darkness", "Loss"] },
-            { q: "The Yule Ball music starts. Who do you hope asks you?", o: ["Harry", "Ron", "Someone unexpected", "No one, I'd rather read"] },
-            { q: "Which loss broke your heart the most?", o: ["Dobby", "Sirius Black", "Fred Weasley", "Severus Snape"] },
-            { q: "If you could keep one Hallow?", o: ["The Elder Wand", "Resurrection Stone", "Invisibility Cloak", "None"] },
+            { q: "The Hat sits on your head. Where do you belong?", o: ["Gryffindor", "Ravenclaw", "Slytherin", "Hufflepuff"] },
+            { q: "What do you see in the Mirror of Erised?", o: ["Glory", "Peace", "Love", "Knowledge"] },
+            { q: "The Boggart appears. What is it?", o: ["Failure", "Isolation", "Darkness", "Loss"] },
+            { q: "Who do you hope asks you to the Ball?", o: ["Harry", "Ron", "Draco", "No one"] },
+            { q: "Which death hurt the most?", o: ["Dobby", "Sirius", "Fred", "Snape"] },
+            { q: "Choose one Hallow.", o: ["Elder Wand", "Stone", "Cloak", "None"] },
             { q: "Why did you stay when Ron left?", o: ["Duty", "Hope", "Loyalty", "Love"] },
-            { q: "Did you forgive Snape in the end?", o: ["Yes", "No", "It's Complicated", "Always"] },
-            { q: "How did the ending make you feel?", o: ["Perfect", "Heartbroken", "Hopeful", "Empty"] },
-            { q: "Who was truly the bravest?", o: ["Harry", "Hermione", "Neville", "Snape"] },
-            { q: "One word to describe this journey?", o: ["Magic", "Home", "Childhood", "Forever"] },
+            { q: "Did you forgive Snape?", o: ["Yes", "No", "Complicated", "Always"] },
+            { q: "How did the ending feel?", o: ["Perfect", "Sad", "Hopeful", "Empty"] },
+            { q: "Who was the bravest?", o: ["Harry", "Hermione", "Neville", "Snape"] },
+            { q: "One word for the journey?", o: ["Magic", "Home", "Childhood", "Forever"] },
             { q: "Why do I call you my Hermione?", o: ["My Brains", "My Loyalty", "My Heart", "My Magic"] }
         ];
 
@@ -287,19 +276,12 @@
         let answers = {};
 
         // --- LOGIC ---
-        function transition(fromID, toID, callback) {
-            const from = document.getElementById(fromID);
-            const to = document.getElementById(toID);
-            gsap.to(from, { opacity: 0, scale: 0.95, duration: 0.4, onComplete: () => {
-                from.classList.remove('active');
-                to.classList.add('active');
-                gsap.fromTo(to, { opacity: 0, scale: 1.05 }, { opacity: 1, scale: 1, duration: 0.5, onComplete: callback });
-            }});
-        }
-
-        function startExperience() {
-            gsap.to('.envelope-body', { rotateX: 180, scale: 0.5, opacity: 0, duration: 1, onComplete: () => {
-                transition('screen-intro', 'screen-quiz', loadQuestion);
+        function startApp() {
+            gsap.to('#screen-intro', { opacity: 0, scale: 1.1, duration: 0.5, onComplete: () => {
+                document.getElementById('screen-intro').classList.remove('active');
+                document.getElementById('screen-quiz').classList.add('active');
+                gsap.fromTo('#screen-quiz', { opacity: 0 }, { opacity: 1, duration: 0.5 });
+                loadQuestion();
             }});
         }
 
@@ -307,52 +289,84 @@
             const data = questions[qIdx];
             const container = document.getElementById('options-container');
             const qText = document.getElementById('q-text');
-            const qCount = document.getElementById('q-counter');
+            
+            document.getElementById('q-counter').innerText = `PAGE ${qIdx + 1} / ${questions.length}`;
 
-            gsap.to('#progress', { width: `${((qIdx)/questions.length)*100}%` });
-
+            // Fade Out
             gsap.to([qText, container], { opacity: 0, y: -10, duration: 0.2, onComplete: () => {
-                qCount.innerText = `Memory ${qIdx + 1} of 12`;
                 qText.innerText = data.q;
                 container.innerHTML = '';
 
                 data.o.forEach(opt => {
                     const btn = document.createElement('div');
-                    btn.className = 'choice-btn';
-                    btn.innerHTML = `<span class="choice-text">${opt}</span><div class="choice-marker"></div>`;
-                    btn.onclick = () => selectOption(btn, opt);
+                    btn.className = 'ink-btn';
+                    btn.innerHTML = `<span class="btn-text">${opt}</span>`;
+                    btn.onclick = (e) => selectOption(e, btn, opt);
                     container.appendChild(btn);
                 });
 
-                gsap.to([qText, container], { opacity: 1, y: 0, duration: 0.4 });
-                gsap.from('.choice-btn', { x: -10, opacity: 0, stagger: 0.05, delay: 0.1 });
+                // Fade In
+                gsap.to([qText, container], { opacity: 1, y: 0, duration: 0.3 });
+                gsap.from('.ink-btn', { x: -20, opacity: 0, stagger: 0.05 });
             }});
         }
 
-        function selectOption(btn, val) {
+        function selectOption(e, btn, val) {
             btn.classList.add('active');
             answers[`Q${qIdx+1}`] = val;
+            
+            // FOOTSTEPS EFFECT
+            createFootsteps();
+
             setTimeout(() => {
                 qIdx++;
                 if(qIdx < questions.length) {
                     loadQuestion();
                 } else {
-                    gsap.to('#progress', { width: '100%' });
                     showBridge();
                 }
-            }, 300);
+            }, 600);
+        }
+
+        function createFootsteps() {
+            const layer = document.getElementById('footsteps-layer');
+            const steps = ['👣', '👣', '👣'];
+            
+            steps.forEach((step, i) => {
+                const el = document.createElement('div');
+                el.className = 'footstep';
+                el.innerText = step;
+                // Random position near center
+                el.style.left = (window.innerWidth/2 - 50 + (i*30)) + 'px';
+                el.style.top = (window.innerHeight/2 + (i*40)) + 'px';
+                layer.appendChild(el);
+
+                gsap.to(el, { opacity: 1, duration: 0.5, delay: i*0.2, onComplete: () => {
+                    gsap.to(el, { opacity: 0, duration: 0.5, delay: 0.2, onComplete: () => el.remove() });
+                }});
+            });
         }
 
         function showBridge() {
             transition('screen-quiz', 'screen-bridge');
-            gsap.to('#bridge-text', { opacity: 1, duration: 1.5, onComplete: () => {
-                setTimeout(() => transition('screen-bridge', 'screen-reveal'), 1000);
+            gsap.fromTo('#bridge-text', { opacity: 0, scale: 0.5 }, { opacity: 1, scale: 1.2, duration: 2, onComplete: () => {
+                transition('screen-bridge', 'screen-reveal');
             }});
         }
 
         function goToForm() { transition('screen-reveal', 'screen-form'); }
 
-        function submitRegistry() {
+        function transition(fromID, toID) {
+            const from = document.getElementById(fromID);
+            const to = document.getElementById(toID);
+            gsap.to(from, { opacity: 0, duration: 0.5, onComplete: () => {
+                from.classList.remove('active');
+                to.classList.add('active');
+                gsap.fromTo(to, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.5 });
+            }});
+        }
+
+        function submitForm() {
             const data = {
                 ...answers,
                 name: document.getElementById('name').value,
@@ -363,7 +377,7 @@
             };
 
             if(!data.name || !data.address) {
-                gsap.to('.artifact-card', { x: 10, duration: 0.1, yoyo: true, repeat: 5 });
+                gsap.to('.ink-card', { x: 10, duration: 0.1, yoyo: true, repeat: 5 });
                 return;
             }
 
@@ -372,24 +386,8 @@
 
             emailjs.send(SERVICE_ID, TEMPLATE_ID, data)
                 .then(() => transition('screen-form', 'screen-end'))
-                .catch(() => alert('The Owl is confused. Please screenshot.'));
+                .catch(() => alert('Error. Please screenshot.'));
         }
-
-        // --- BACKGROUND ---
-        const cvs = document.getElementById('canvas-dust');
-        const ctx = cvs.getContext('2d');
-        let parts = [];
-        function resize() { cvs.width = window.innerWidth; cvs.height = window.innerHeight; }
-        window.addEventListener('resize', resize); resize();
-        class P {
-            constructor() { this.x=Math.random()*cvs.width; this.y=Math.random()*cvs.height; this.v=Math.random()*0.3+0.1; this.s=Math.random()*1.5; }
-            update() { this.y-=this.v; if(this.y<0) this.y=cvs.height; }
-            draw() { ctx.fillStyle='rgba(212,175,55,0.4)'; ctx.beginPath(); ctx.arc(this.x,this.y,this.s,0,Math.PI*2); ctx.fill(); }
-        }
-        for(let i=0;i<60;i++) parts.push(new P());
-        function anim(){ ctx.clearRect(0,0,cvs.width,cvs.height); parts.forEach(p=>{p.update();p.draw();}); requestAnimationFrame(anim); }
-        anim();
-
     </script>
 </body>
 </html>
