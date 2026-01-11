@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
 import { getFirestore, collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { Play, Volume2, VolumeX, Feather, Star, Moon, MapPin, Send } from 'lucide-react';
+import { Volume2, VolumeX, Sparkles, Feather, MapPin, MoveRight } from 'lucide-react';
 
 // --- FIREBASE SETUP ---
 const firebaseConfig = JSON.parse(__firebase_config);
@@ -11,337 +11,461 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
-// --- STYLES & ASSETS ---
-// Using Google Fonts via style injection for that authentic wizarding feel
+// --- ASSETS & STYLES ---
 const googleFontsLink = document.createElement('link');
 googleFontsLink.rel = 'stylesheet';
-googleFontsLink.href = 'https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Pinyon+Script&display=swap';
+googleFontsLink.href = 'https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=Mrs+Saint+Delafield&display=swap';
 document.head.appendChild(googleFontsLink);
 
-const FloatingCandle = ({ delay }) => (
-  <div 
-    className="absolute animate-float opacity-80"
-    style={{ 
-      top: `${Math.random() * 40}%`, 
-      left: `${Math.random() * 90}%`, 
-      animationDelay: `${delay}s`,
-      animationDuration: `${4 + Math.random() * 4}s`
-    }}
-  >
-    <div className="w-2 h-8 bg-amber-100 rounded-sm relative shadow-lg">
-      <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 w-2 h-3 bg-orange-400 rounded-full animate-flicker blur-[1px]"></div>
-      <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 w-4 h-5 bg-yellow-300 rounded-full animate-pulse opacity-50 blur-[4px]"></div>
-    </div>
-  </div>
-);
+// --- UTILS ---
+const useAudio = (url) => {
+  const audio = useRef(new Audio(url));
+  const [playing, setPlaying] = useState(false);
 
-// --- MAIN COMPONENT ---
-export default function HogwartsLetter() {
-  const [step, setStep] = useState(0); // 0: Envelope, 1: Letter, 2: Reflections, 3: Address, 4: End
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [user, setUser] = useState(null);
-  const audioRef = useRef(null);
-  
-  // Form State
-  const [formData, setFormData] = useState({
-    moment: '',
-    message: '',
-    address: ''
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Auth Init
   useEffect(() => {
-    const initAuth = async () => {
-        try {
-            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                await signInWithCustomToken(auth, __initial_auth_token);
-            } else {
-                await signInAnonymously(auth);
-            }
-        } catch (e) {
-            console.error("Auth failed", e);
-        }
-    };
-    initAuth();
-    const unsubscribe = onAuthStateChanged(auth, setUser);
-    return () => unsubscribe();
+    audio.current.loop = true;
+    audio.current.volume = 0.4;
+    return () => audio.current.pause();
   }, []);
 
-  // Audio Toggle
-  const toggleAudio = () => {
-    if (!audioRef.current) {
-      audioRef.current = new Audio('https://upload.wikimedia.org/wikipedia/commons/e/e3/Waltz_of_the_Flowers_%28by_Tchaikovsky%29.ogg'); // Royalty free classical waltz suitable for magical vibes
-      audioRef.current.loop = true;
-      audioRef.current.volume = 0.3;
-    }
-    
-    if (isPlaying) {
-      audioRef.current.pause();
-    } else {
-      audioRef.current.play().catch(e => console.log("Audio play failed interaction required"));
-    }
-    setIsPlaying(!isPlaying);
+  const toggle = () => {
+    if (playing) audio.current.pause();
+    else audio.current.play().catch(e => console.log("Audio play blocked", e));
+    setPlaying(!playing);
   };
 
-  const handleInputChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  return [playing, toggle];
+};
+
+// --- SCENES ---
+
+// 1. LUMOS (Intro)
+const LumosScene = ({ onComplete }) => {
+  const [ignited, setIgnited] = useState(false);
+  const [mousePos, setMousePos] = useState({ x: 50, y: 50 });
+
+  const handleMouseMove = (e) => {
+    setMousePos({
+      x: (e.clientX / window.innerWidth) * 100,
+      y: (e.clientY / window.innerHeight) * 100,
+    });
   };
 
-  const nextStep = () => setStep(s => s + 1);
-
-  const handleSubmit = async () => {
-    if (!user) return;
-    setIsSubmitting(true);
-    
-    try {
-      // Save to private user collection
-      await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'wizarding_responses'), {
-        ...formData,
-        recipient: 'Sanjana',
-        timestamp: serverTimestamp()
-      });
-      nextStep();
-    } catch (error) {
-      console.error("Error sending owl:", error);
-      setIsSubmitting(false);
-    }
+  const ignite = () => {
+    setIgnited(true);
+    setTimeout(onComplete, 2500);
   };
-
-  // --- RENDER HELPERS ---
-  
-  const EnvelopeSection = () => (
-    <div className="flex flex-col items-center justify-center h-full text-center z-10 cursor-pointer" onClick={() => { toggleAudio(); nextStep(); }}>
-      <div className="bg-[#f0e6d2] w-64 h-40 shadow-2xl rounded-sm relative flex items-center justify-center transform transition hover:scale-105 duration-700 border-2 border-[#8b5a2b]">
-        {/* Wax Seal */}
-        <div className="absolute rounded-full bg-red-800 w-12 h-12 shadow-md flex items-center justify-center border-2 border-red-900 z-20">
-          <span className="font-serif text-amber-200 text-xl font-bold">H</span>
-        </div>
-        <div className="font-cinzel text-[#2c1810] tracking-widest text-sm mt-8 opacity-80">
-          To Sanjana
-        </div>
-      </div>
-      <p className="mt-8 text-amber-100/70 font-cinzel text-sm animate-pulse">Tap to break the seal</p>
-    </div>
-  );
-
-  const LetterSection = () => (
-    <div className="w-full max-w-2xl bg-[#f0e6d2] p-8 md:p-12 shadow-2xl rounded-sm mx-4 relative overflow-hidden animate-fade-in parchment-texture">
-      <div className="border-4 border-double border-[#8b5a2b]/20 p-6 h-full relative">
-        <h1 className="font-pinyon text-4xl md:text-5xl text-[#4a2c22] mb-6">Dear Sanjana,</h1>
-        
-        <div className="font-cormorant text-lg md:text-xl text-[#2c1810] leading-relaxed space-y-4">
-          <p>
-            It is strange how the castle waits for us, isn’t it?
-          </p>
-          <p>
-            I have known you since we were small, back before we knew about platforms or potions. But watching you finally step into this world feels... inevitable. 
-          </p>
-          <p>
-            They say the wand chooses the wizard, but I think the story chooses the person, too. I’ve always seen it in you—that quiet intelligence, the loyalty that runs deep, the way you care about things so completely. 
-          </p>
-          <p>
-            You’ve always been <span className="italic font-semibold text-[#6d4c41]">my Hermione</span>. Even before you knew who she was.
-          </p>
-          <p>
-            Welcome home, my friend. The magic has been waiting for you.
-          </p>
-        </div>
-
-        <div className="mt-8 flex justify-end">
-          <button 
-            onClick={nextStep}
-            className="font-cinzel text-[#4a2c22] border-b border-[#4a2c22] hover:text-[#8b5a2b] transition-colors pb-1 flex items-center gap-2"
-          >
-            Turn the page <Feather className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-
-  const ReflectionsSection = () => (
-    <div className="w-full max-w-2xl bg-[#f0e6d2] p-8 md:p-12 shadow-2xl rounded-sm mx-4 relative animate-fade-in parchment-texture">
-       <div className="border-4 border-double border-[#8b5a2b]/20 p-6 h-full">
-        <h2 className="font-cinzel text-2xl text-[#4a2c22] mb-8 text-center border-b border-[#8b5a2b]/20 pb-4">Reflections in the Pensieve</h2>
-        
-        <div className="space-y-8 font-cormorant">
-          <div>
-            <label className="block text-[#5d4037] text-xl mb-2 italic">
-              Which moment of magic stayed with you the longest?
-            </label>
-            <textarea 
-              name="moment"
-              value={formData.moment}
-              onChange={handleInputChange}
-              className="w-full bg-transparent border-b-2 border-[#8b5a2b]/30 focus:border-[#8b5a2b] outline-none text-[#2c1810] text-xl min-h-[80px] placeholder-[#8b5a2b]/30 resize-none transition-colors"
-              placeholder="Was it the feathers levitating, or the Patronus in the woods?"
-            />
-          </div>
-
-          <div>
-            <label className="block text-[#5d4037] text-xl mb-2 italic">
-              A message to your oldest friend...
-            </label>
-            <textarea 
-              name="message"
-              value={formData.message}
-              onChange={handleInputChange}
-              className="w-full bg-transparent border-b-2 border-[#8b5a2b]/30 focus:border-[#8b5a2b] outline-none text-[#2c1810] text-xl min-h-[80px] placeholder-[#8b5a2b]/30 resize-none transition-colors"
-              placeholder="Write something that time cannot erase..."
-            />
-          </div>
-        </div>
-
-        <div className="mt-8 flex justify-end">
-          <button 
-            onClick={nextStep}
-            className="font-cinzel text-[#4a2c22] border-b border-[#4a2c22] hover:text-[#8b5a2b] transition-colors pb-1 flex items-center gap-2"
-          >
-            Continue <Star className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-
-  const AddressSection = () => (
-    <div className="w-full max-w-2xl bg-[#f0e6d2] p-8 md:p-12 shadow-2xl rounded-sm mx-4 relative animate-fade-in parchment-texture">
-       <div className="border-4 border-double border-[#8b5a2b]/20 p-6 h-full">
-        <div className="text-center mb-6">
-          <Moon className="w-8 h-8 text-[#4a2c22] mx-auto mb-2 opacity-50" />
-          <h2 className="font-cinzel text-2xl text-[#4a2c22]">The Owl Registry</h2>
-        </div>
-        
-        <div className="font-cormorant text-lg text-[#2c1810] text-center mb-8 space-y-2">
-          <p>The owls of Hogwarts sometimes deliver small tokens of magic to those who believe.</p>
-          <p className="italic text-[#5d4037]">Please inscribe your current dwelling in Indore, so the magic knows exactly where to find you.</p>
-        </div>
-
-        <div className="mb-8">
-           <label className="block text-[#5d4037] font-cinzel text-sm mb-2 uppercase tracking-widest flex items-center gap-2">
-              <MapPin className="w-4 h-4" /> Residence in Indore
-            </label>
-            <textarea 
-              name="address"
-              value={formData.address}
-              onChange={handleInputChange}
-              className="w-full bg-[#e6dac0] border border-[#8b5a2b]/30 p-4 rounded-sm focus:border-[#8b5a2b] outline-none text-[#2c1810] font-cormorant text-xl placeholder-[#8b5a2b]/40 resize-none h-32 shadow-inner"
-              placeholder="e.g. The house near the old banyan tree..."
-            />
-        </div>
-
-        <div className="mt-4 flex justify-center">
-          <button 
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-            className="bg-[#4a2c22] text-[#f0e6d2] font-cinzel px-8 py-3 rounded-sm hover:bg-[#2c1810] transition-colors flex items-center gap-3 shadow-lg disabled:opacity-50"
-          >
-            {isSubmitting ? 'Dispatching Owl...' : 'Send by Owl Post'} <Send className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-
-  const FinaleSection = () => (
-    <div className="text-center animate-fade-in z-10 p-6">
-      <div className="mb-6 animate-bounce-slow">
-        <span className="text-6xl filter drop-shadow-glow">🦉</span>
-      </div>
-      <h1 className="font-cinzel text-3xl md:text-5xl text-amber-100 mb-4 tracking-wider text-shadow">
-        Mischief Managed
-      </h1>
-      <p className="font-cormorant text-xl text-amber-100/80 max-w-md mx-auto leading-relaxed">
-        Your message has been carried into the night sky. May magic always find you, Sanjana.
-      </p>
-      
-      <div className="mt-12 opacity-50">
-        <p className="font-cinzel text-xs text-amber-200 uppercase tracking-[0.3em]">
-          Always
-        </p>
-      </div>
-    </div>
-  );
 
   return (
-    <div className="relative w-full h-screen overflow-hidden bg-[#0a0a0a] selection:bg-[#4a2c22] selection:text-[#f0e6d2]">
-      {/* Background Ambience */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-[#1a100c] via-[#0f0a08] to-[#000000]"></div>
+    <div 
+      className={`relative w-full h-full bg-[#050404] cursor-none overflow-hidden transition-all duration-1000 ${ignited ? 'bg-[#0f0a08]' : ''}`}
+      onMouseMove={handleMouseMove}
+      onClick={ignite}
+    >
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <h1 className={`font-cinzel text-amber-100/30 tracking-[0.5em] text-sm transition-opacity duration-1000 ${ignited ? 'opacity-0' : 'opacity-100'}`}>
+          LUMOS
+        </h1>
+      </div>
+
+      {/* Wand Tip Light */}
+      <div 
+        className="absolute w-64 h-64 bg-amber-100/10 rounded-full blur-3xl pointer-events-none transition-all duration-75 ease-out mix-blend-screen"
+        style={{ 
+          top: `${mousePos.y}%`, 
+          left: `${mousePos.x}%`, 
+          transform: 'translate(-50%, -50%)',
+          opacity: ignited ? 0 : 0.5 
+        }} 
+      />
       
-      {/* Stars */}
-      {[...Array(20)].map((_, i) => (
+      {/* The Flash */}
+      <div 
+        className={`absolute inset-0 bg-white transition-opacity duration-[2000ms] pointer-events-none ${ignited ? 'opacity-0' : 'opacity-0'}`}
+        style={{ opacity: ignited ? 0 : 0 }} 
+      >
+          {ignited && <div className="absolute inset-0 bg-white animate-flash-fade" />}
+      </div>
+    </div>
+  );
+};
+
+// 2. THE CORRIDOR (Narrative)
+const CorridorScene = ({ onComplete }) => {
+  const [lineIndex, setLineIndex] = useState(0);
+  
+  const lines = [
+    "Sanjana...",
+    "It has been quiet here without you.",
+    "Walking these halls, I am reminded of how we started.",
+    "Two children, long before we knew of magic.",
+    "But looking at you now...",
+    "I see the same spark. The same quiet strength.",
+    "You have always been my Hermione.",
+  ];
+
+  const advance = () => {
+    if (lineIndex < lines.length - 1) {
+      setLineIndex(l => l + 1);
+    } else {
+      onComplete();
+    }
+  };
+
+  return (
+    <div className="relative w-full h-full bg-[#0c0a08] overflow-hidden flex items-center justify-center perspective-1000" onClick={advance}>
+      {/* Ambient Depth Background */}
+      <div className="absolute inset-0 opacity-30">
+        <div className="absolute w-[200%] h-[200%] top-[-50%] left-[-50%] bg-[radial-gradient(circle_at_center,_#2a1d15_0%,_transparent_60%)] animate-pulse-slow"></div>
+        {/* Stone Texture Overlay */}
+        <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')]"></div>
+      </div>
+
+      {/* Floating Particles */}
+      {[...Array(15)].map((_, i) => (
         <div 
           key={i}
-          className="absolute bg-white rounded-full animate-twinkle"
+          className="absolute rounded-full bg-amber-200/20 blur-[1px] animate-float-particle"
           style={{
-            width: Math.random() * 3 + 'px',
-            height: Math.random() * 3 + 'px',
-            top: Math.random() * 100 + '%',
+            width: Math.random() * 4 + 'px',
+            height: Math.random() * 4 + 'px',
             left: Math.random() * 100 + '%',
-            opacity: Math.random() * 0.7,
-            animationDuration: Math.random() * 3 + 2 + 's'
+            top: Math.random() * 100 + '%',
+            animationDuration: (10 + Math.random() * 20) + 's',
+            animationDelay: Math.random() * -10 + 's'
           }}
         />
       ))}
 
-      {/* Floating Candles */}
-      {[...Array(6)].map((_, i) => (
-        <FloatingCandle key={i} delay={i * 1.5} />
-      ))}
-
-      {/* Audio Control */}
-      <button 
-        onClick={toggleAudio}
-        className="absolute top-4 right-4 z-50 text-amber-100/50 hover:text-amber-100 transition-colors p-2"
-      >
-        {isPlaying ? <Volume2 className="w-6 h-6" /> : <VolumeX className="w-6 h-6" />}
-      </button>
-
-      {/* Content Container */}
-      <div className="relative z-20 w-full h-full flex items-center justify-center p-4">
-        {step === 0 && <EnvelopeSection />}
-        {step === 1 && <LetterSection />}
-        {step === 2 && <ReflectionsSection />}
-        {step === 3 && <AddressSection />}
-        {step === 4 && <FinaleSection />}
+      {/* Text Container */}
+      <div className="relative z-10 max-w-2xl px-8 text-center">
+        {lines.map((line, i) => (
+          <p 
+            key={i}
+            className={`font-cormorant text-2xl md:text-4xl text-amber-100/90 leading-relaxed transition-all duration-1000 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full
+              ${i === lineIndex ? 'opacity-100 translate-z-0 scale-100 blur-0' : i < lineIndex ? 'opacity-0 -translate-y-12 blur-sm' : 'opacity-0 translate-y-12 blur-sm'}
+            `}
+          >
+            {line}
+          </p>
+        ))}
       </div>
 
-      {/* Global CSS for custom animations/fonts */}
+      <div className="absolute bottom-12 w-full text-center opacity-30 animate-bounce-slow">
+        <span className="font-cinzel text-xs tracking-[0.3em] text-amber-100">Click to Advance</span>
+      </div>
+    </div>
+  );
+};
+
+// 3. THE PENSIEVE (Memory Input)
+const PensieveScene = ({ onComplete, setData }) => {
+  const [input, setInput] = useState('');
+  
+  // Simple particle system simulation for 'memory fluid'
+  const canvasRef = useRef(null);
+  
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+    
+    const resize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    window.addEventListener('resize', resize);
+    resize();
+
+    class Particle {
+      constructor() {
+        this.x = Math.random() * canvas.width;
+        this.y = Math.random() * canvas.height;
+        this.vx = (Math.random() - 0.5) * 0.5;
+        this.vy = (Math.random() - 0.5) * 0.5;
+        this.size = Math.random() * 2;
+        this.alpha = Math.random() * 0.5;
+      }
+      update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        if (this.x < 0) this.x = canvas.width;
+        if (this.x > canvas.width) this.x = 0;
+        if (this.y < 0) this.y = canvas.height;
+        if (this.y > canvas.height) this.y = 0;
+      }
+      draw() {
+        ctx.fillStyle = `rgba(147, 197, 253, ${this.alpha})`; // Light blue/silver
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    for (let i = 0; i < 100; i++) particles.push(new Particle());
+
+    const animate = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // Create a swirling gradient background
+      const gradient = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 0, canvas.width/2, canvas.height/2, canvas.width);
+      gradient.addColorStop(0, '#1e293b'); // Slate 800
+      gradient.addColorStop(1, '#020617'); // Slate 950
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      particles.forEach(p => { p.update(); p.draw(); });
+      requestAnimationFrame(animate);
+    };
+    animate();
+
+    return () => window.removeEventListener('resize', resize);
+  }, []);
+
+  const handleSubmit = () => {
+    if (input.trim()) {
+      setData(d => ({ ...d, memory: input }));
+      onComplete();
+    }
+  };
+
+  return (
+    <div className="relative w-full h-full bg-black overflow-hidden flex flex-col items-center justify-center">
+      <canvas ref={canvasRef} className="absolute inset-0 opacity-60" />
+      
+      <div className="relative z-10 w-full max-w-xl px-6 text-center animate-fade-in-slow">
+        <h2 className="font-cinzel text-blue-100/80 text-xl md:text-2xl mb-8 tracking-widest uppercase">The Pensieve</h2>
+        <p className="font-cormorant text-2xl text-blue-50/90 mb-12 italic">
+          "One memory has stayed with me... tell me yours."
+        </p>
+
+        <div className="relative group">
+          <div className="absolute inset-0 bg-blue-500/10 blur-xl rounded-full transform group-hover:scale-110 transition-transform duration-700"></div>
+          <input 
+            type="text" 
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+            className="relative w-full bg-transparent border-b border-blue-200/30 text-center font-cormorant text-2xl text-blue-50 placeholder-blue-200/20 py-4 focus:outline-none focus:border-blue-300 transition-colors"
+            placeholder="A moment of magic..."
+            autoFocus
+          />
+        </div>
+
+        <div className="mt-12 opacity-0 animate-fade-in delay-1000">
+          <button onClick={handleSubmit} className="text-blue-200/50 hover:text-blue-100 transition-colors font-cinzel text-sm tracking-widest">
+            Drop memory into the water
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// 4. THE STUDY (Address Input)
+const StudyScene = ({ onComplete, setData, submitToDb }) => {
+  const [address, setAddress] = useState('');
+  
+  const handleNext = () => {
+    if (address.trim()) {
+      const newData = { address };
+      setData(d => ({ ...d, ...newData }));
+      submitToDb(address); // Pass address directly to avoid closure staleness
+      onComplete();
+    }
+  };
+
+  return (
+    <div className="relative w-full h-full bg-[#1c1510] flex items-center justify-center overflow-hidden">
+      {/* Warm Firelight Gradient */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_90%,_#7c2d12_0%,_transparent_50%)] opacity-40 animate-pulse-slow"></div>
+      
+      {/* 3D Tilted Desk Effect */}
+      <div className="relative z-10 w-full max-w-3xl p-8 perspective-1000">
+        <div 
+          className="bg-[#f0e6d2] p-12 shadow-2xl relative transform rotateX-3 rotateY-1 border-t-4 border-[#8b5a2b]/20"
+          style={{ 
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 0 100px rgba(139, 90, 43, 0.1)' 
+          }}
+        >
+          {/* Quill Icon Decoration */}
+          <div className="absolute -top-6 -right-6 text-[#4a2c22] opacity-80 transform rotate-12">
+            <Feather size={64} strokeWidth={1} />
+          </div>
+
+          <h2 className="font-cinzel text-[#4a2c22] text-xl tracking-widest mb-2 flex items-center gap-3">
+             <MapPin size={18} /> The Owl Registry
+          </h2>
+          <div className="h-px w-full bg-[#4a2c22]/20 mb-8"></div>
+          
+          <p className="font-cormorant text-xl text-[#2c1810] mb-8 leading-relaxed">
+            The owls know the way, but they need a destination. <br/>
+            <span className="italic text-[#8b5a2b]">Where should the magic find you in Indore?</span>
+          </p>
+
+          <textarea
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            className="w-full bg-transparent border-l-4 border-[#8b5a2b]/30 pl-4 py-2 font-cormorant text-2xl text-[#2c1810] placeholder-[#8b5a2b]/30 focus:outline-none focus:border-[#8b5a2b] min-h-[100px] resize-none leading-relaxed"
+            placeholder="Write here..."
+          />
+
+          <div className="mt-8 flex justify-end">
+             <button 
+              onClick={handleNext}
+              className="group flex items-center gap-3 font-cinzel text-[#4a2c22] hover:text-[#8b5a2b] transition-colors"
+             >
+               Confirm Entry <MoveRight className="group-hover:translate-x-1 transition-transform" size={18} />
+             </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// 5. THE NIGHT SKY (Finale)
+const SkyScene = () => {
+  return (
+    <div className="relative w-full h-full bg-[#020617] overflow-hidden flex flex-col items-center justify-center">
+       {/* Stars */}
+       {[...Array(50)].map((_, i) => (
+        <div 
+          key={i}
+          className="absolute bg-white rounded-full animate-twinkle"
+          style={{
+            width: Math.random() * 2 + 'px',
+            height: Math.random() * 2 + 'px',
+            top: Math.random() * 100 + '%',
+            left: Math.random() * 100 + '%',
+            opacity: Math.random(),
+            animationDuration: (Math.random() * 3 + 2) + 's'
+          }}
+        />
+      ))}
+
+      <div className="relative z-10 text-center animate-fade-in-slow p-8">
+        <Sparkles className="w-12 h-12 text-amber-100 mx-auto mb-6 opacity-80" />
+        <h1 className="font-cinzel text-3xl md:text-5xl text-amber-50 mb-6 tracking-widest">
+          Mischief Managed
+        </h1>
+        <p className="font-cormorant text-xl text-amber-100/60 max-w-md mx-auto">
+          The memory has been stored. The owl has been dispatched.
+        </p>
+        <div className="mt-16 border-t border-amber-100/10 pt-8 w-24 mx-auto">
+           <p className="font-MrsSaintDelafield text-4xl text-amber-100/40 transform -rotate-6">Always.</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- MAIN CONTROLLER ---
+
+export default function HogwartsImmersive() {
+  const [scene, setScene] = useState(0); // 0: Lumos, 1: Corridor, 2: Pensieve, 3: Study, 4: Sky
+  const [isPlaying, toggleAudio] = useAudio('https://upload.wikimedia.org/wikipedia/commons/c/c2/Gymnop%C3%A9die_No._1.ogg'); // Satie - Gymnopédie No.1 (Melancholic, atmospheric)
+  const [user, setUser] = useState(null);
+  
+  // Data Collection
+  const [collectionData, setCollectionData] = useState({
+    memory: '',
+    address: ''
+  });
+
+  useEffect(() => {
+    const initAuth = async () => {
+      if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+        await signInWithCustomToken(auth, __initial_auth_token);
+      } else {
+        await signInAnonymously(auth);
+      }
+    };
+    initAuth();
+    onAuthStateChanged(auth, setUser);
+  }, []);
+
+  const handleDbSubmit = async (finalAddress) => {
+    if (!user) return;
+    try {
+      await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'wizarding_responses'), {
+        ...collectionData,
+        address: finalAddress, // Ensure we use the latest address
+        recipient: 'Sanjana',
+        timestamp: serverTimestamp(),
+        type: 'immersive_experience'
+      });
+    } catch (e) {
+      console.error("Owl lost its way", e);
+    }
+  };
+
+  const nextScene = () => setScene(s => s + 1);
+
+  return (
+    <div className="w-full h-screen relative bg-black font-sans selection:bg-amber-900 selection:text-white">
+      {/* Global Audio Control */}
+      <button 
+        onClick={toggleAudio}
+        className="fixed top-6 right-6 z-50 text-white/30 hover:text-white transition-colors"
+      >
+        {isPlaying ? <Volume2 /> : <VolumeX />}
+      </button>
+
+      {/* Scene Render */}
+      <div className="w-full h-full transition-opacity duration-1000 ease-in-out">
+        {scene === 0 && <LumosScene onComplete={nextScene} />}
+        {scene === 1 && <CorridorScene onComplete={nextScene} />}
+        {scene === 2 && <PensieveScene onComplete={nextScene} setData={setCollectionData} />}
+        {scene === 3 && <StudyScene onComplete={nextScene} setData={setCollectionData} submitToDb={handleDbSubmit} />}
+        {scene === 4 && <SkyScene />}
+      </div>
+
       <style>{`
         .font-cinzel { font-family: 'Cinzel', serif; }
         .font-cormorant { font-family: 'Cormorant Garamond', serif; }
-        .font-pinyon { font-family: 'Pinyon Script', cursive; }
-        
-        .parchment-texture {
-          background-image: url("data:image/svg+xml,%3Csvg width='200' height='200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.1'/%3E%3C/svg%3E");
-          box-shadow: inset 0 0 60px rgba(74, 44, 34, 0.3);
-        }
+        .font-MrsSaintDelafield { font-family: 'Mrs Saint Delafield', cursive; }
 
-        @keyframes float {
+        @keyframes flash-fade {
+          0% { opacity: 1; }
+          100% { opacity: 0; }
+        }
+        .animate-flash-fade { animation: flash-fade 2s ease-out forwards; }
+
+        @keyframes float-particle {
+          0% { transform: translateY(0) translateX(0); opacity: 0; }
+          20% { opacity: 0.5; }
+          80% { opacity: 0.5; }
+          100% { transform: translateY(-100px) translateX(20px); opacity: 0; }
+        }
+        .animate-float-particle { animation-timing-function: linear; }
+
+        @keyframes pulse-slow {
+          0%, 100% { opacity: 0.3; }
+          50% { opacity: 0.5; }
+        }
+        .animate-pulse-slow { animation: pulse-slow 8s ease-in-out infinite; }
+        
+        @keyframes bounce-slow {
           0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-20px); }
+          50% { transform: translateY(-10px); }
         }
-        @keyframes flicker {
-          0%, 100% { opacity: 1; transform: translateX(-50%) scale(1); }
-          50% { opacity: 0.8; transform: translateX(-50%) scale(0.9); }
+        .animate-bounce-slow { animation: bounce-slow 3s ease-in-out infinite; }
+
+        @keyframes fade-in-slow {
+          0% { opacity: 0; transform: translateY(20px); }
+          100% { opacity: 1; transform: translateY(0); }
         }
+        .animate-fade-in-slow { animation: fade-in-slow 2s ease-out forwards; }
+
         @keyframes twinkle {
           0%, 100% { opacity: 0.2; }
           50% { opacity: 0.8; }
         }
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .animate-float { animation: float 6s ease-in-out infinite; }
-        .animate-flicker { animation: flicker 0.1s infinite alternate; }
         .animate-twinkle { animation: twinkle 3s ease-in-out infinite; }
-        .animate-fade-in { animation: fadeIn 1.5s ease-out forwards; }
-        .animate-bounce-slow { animation: float 3s ease-in-out infinite; }
-        
-        .text-shadow { text-shadow: 0 0 10px rgba(251, 191, 36, 0.3); }
+
+        .perspective-1000 { perspective: 1000px; }
+        .rotateX-3 { transform: rotateX(3deg); }
       `}</style>
     </div>
   );
