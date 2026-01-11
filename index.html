@@ -1,361 +1,820 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Witch's Evaluation</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>The Pensieve</title>
 
-    <style>
-        :root {
-            --bg: #0b0b0f;
-            --glass: rgba(255, 255, 255, 0.08);
-            --gold: #FFD700;
-            --purple: #9d4edd;
-            --text: #f0f0f0;
-        }
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/CustomEase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;800&family=Cormorant+Garamond:ital,wght@0,300;0,500;0,700;1,400&family=Monsieur+La+Doulaise&display=swap" rel="stylesheet">
 
-        body {
-            margin: 0; padding: 0;
-            background: var(--bg);
-            color: var(--text);
-            font-family: 'Montserrat', sans-serif;
-            height: 100dvh;
-            width: 100vw;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-        }
+<style>
+/* -----------------------------------------------------------
+   1. CORE VARIABLES & RESET
+----------------------------------------------------------- */
+:root {
+    --bg-dark: #020203;
+    --bg-deep: #0a0a0f;
+    --gold-primary: #D4AF37;
+    --gold-light: #fceabb;
+    --gold-dim: #8a6c2e;
+    --silver: #a8a9ad;
+    --text-main: #e0e0e0;
+    --glass: rgba(255, 255, 255, 0.03);
+    --glass-border: rgba(212, 175, 55, 0.15);
+    --success: #28a745;
+    --error: #dc3545;
+    --font-head: 'Cinzel', serif;
+    --font-body: 'Cormorant Garamond', serif;
+    --font-script: 'Monsieur La Doulaise', cursive;
+}
 
-        /* --- BACKGROUND --- */
-        .orb {
-            position: fixed;
-            border-radius: 50%;
-            filter: blur(80px);
-            z-index: -1;
-            opacity: 0.4;
-        }
-        .orb-1 { top: -10%; left: -10%; width: 300px; height: 300px; background: var(--purple); animation: float 10s infinite; }
-        .orb-2 { bottom: -10%; right: -10%; width: 250px; height: 250px; background: #681111; animation: float 12s infinite reverse; }
+*, *::before, *::after {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    outline: none;
+}
 
-        @keyframes float { 0% { transform: translate(0,0); } 50% { transform: translate(30px, 50px); } 100% { transform: translate(0,0); } }
+body {
+    margin: 0;
+    padding: 0;
+    background-color: var(--bg-dark);
+    color: var(--text-main);
+    font-family: var(--font-body);
+    height: 100dvh;
+    width: 100vw;
+    overflow: hidden;
+    position: fixed; /* Lock scroll */
+    perspective: 1200px; /* Deep 3D */
+}
 
-        /* --- PROGRESS BAR --- */
-        .progress-container {
-            position: absolute; top: 0; left: 0; width: 100%; height: 6px;
-            background: rgba(255,255,255,0.1);
-            z-index: 100;
-        }
-        .progress-bar {
-            height: 100%; width: 0%;
-            background: linear-gradient(90deg, var(--gold), #ffaa00);
-            transition: width 0.4s ease;
-            box-shadow: 0 0 10px var(--gold);
-        }
+/* -----------------------------------------------------------
+   2. VISUAL LAYERS
+----------------------------------------------------------- */
+#canvas-universe {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 0; pointer-events: none;
+}
 
-        /* --- SCREENS --- */
-        .screen {
-            position: absolute; top: 0; left: 0;
-            width: 100%; height: 100%;
-            padding: 24px;
-            display: flex; flex-direction: column;
-            justify-content: center; align-items: center;
-            opacity: 0; visibility: hidden;
-            transition: opacity 0.4s;
-        }
-        .screen.active { opacity: 1; visibility: visible; z-index: 10; }
+#vignette-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: radial-gradient(circle at center, transparent 20%, #000 130%);
+    z-index: 1; pointer-events: none;
+    opacity: 0.8;
+}
 
-        /* --- TYPOGRAPHY --- */
-        h1, h2 { font-family: 'Cinzel', serif; text-align: center; color: var(--gold); margin-bottom: 20px; }
-        h1 { font-size: 2rem; }
-        h2 { font-size: 1.5rem; line-height: 1.4; }
-        p { text-align: center; line-height: 1.6; color: #ccc; margin-bottom: 30px; }
+#noise-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    opacity: 0.03; z-index: 2; pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+}
 
-        /* --- QUIZ OPTIONS GRID --- */
-        .options-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 12px;
-            width: 100%;
-            max-width: 400px;
-        }
+/* -----------------------------------------------------------
+   3. STAGE & SCREENS
+----------------------------------------------------------- */
+#stage-container {
+    position: relative;
+    width: 100%; height: 100%;
+    z-index: 10;
+    transform-style: preserve-3d;
+}
 
-        .option-btn {
-            background: var(--glass);
-            border: 1px solid rgba(255,255,255,0.1);
-            padding: 16px;
-            border-radius: 12px;
-            color: white;
-            font-size: 1rem;
-            text-align: left;
-            transition: all 0.2s;
-            position: relative;
-            overflow: hidden;
-            backdrop-filter: blur(10px);
-        }
+.screen {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    display: flex; flex-direction: column; 
+    justify-content: center; align-items: center;
+    padding: 24px;
+    opacity: 0; 
+    visibility: hidden;
+    backface-visibility: hidden;
+    will-change: transform, opacity;
+}
 
-        .option-btn:active { transform: scale(0.98); background: rgba(255, 215, 0, 0.2); border-color: var(--gold); }
-        
-        /* --- INPUTS --- */
-        .magic-input {
-            width: 100%;
-            background: rgba(0,0,0,0.3);
-            border: 1px solid #444;
-            padding: 15px;
-            border-radius: 8px;
-            color: white;
-            font-size: 1rem;
-            margin-bottom: 15px;
-            font-family: 'Montserrat', sans-serif;
-        }
-        .magic-input:focus { outline: none; border-color: var(--gold); }
+.screen.active {
+    opacity: 1;
+    visibility: visible;
+}
 
-        .big-btn {
-            background: var(--gold);
-            color: #000;
-            border: none;
-            width: 100%;
-            padding: 18px;
-            border-radius: 50px;
-            font-weight: 700;
-            font-size: 1.1rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            box-shadow: 0 5px 20px rgba(255, 215, 0, 0.3);
-            margin-top: 20px;
-        }
+/* -----------------------------------------------------------
+   4. TYPOGRAPHY
+----------------------------------------------------------- */
+h1 {
+    font-family: var(--font-head);
+    font-size: 2.4rem;
+    color: var(--gold-primary);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-align: center;
+    margin-bottom: 16px;
+    text-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
+    line-height: 1.1;
+}
 
-        /* --- ANIMATIONS --- */
-        .fade-up { animation: fadeUp 0.5s ease forwards; }
-        @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+h2 {
+    font-family: var(--font-head);
+    font-size: 1.2rem;
+    color: var(--silver);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 30px;
+    text-align: center;
+}
 
-    </style>
+p {
+    font-size: 1.3rem;
+    line-height: 1.5;
+    text-align: center;
+    color: rgba(255,255,255,0.85);
+    max-width: 600px;
+    margin-bottom: 25px;
+}
+
+.script-text {
+    font-family: var(--font-script);
+    font-size: 3.5rem;
+    color: var(--gold-light);
+    line-height: 1;
+    display: block;
+    margin: 10px 0;
+    text-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+}
+
+.highlight { color: var(--gold-primary); font-weight: 600; }
+
+/* -----------------------------------------------------------
+   5. COMPONENT: 3D ENVELOPE (INTRO)
+----------------------------------------------------------- */
+.envelope-3d {
+    width: 280px; height: 180px;
+    perspective: 1000px;
+    cursor: pointer;
+    position: relative;
+    margin-bottom: 40px;
+}
+
+.env-body {
+    width: 100%; height: 100%;
+    position: relative;
+    transform-style: preserve-3d;
+    animation: floatAnim 6s ease-in-out infinite;
+}
+
+.env-face {
+    position: absolute; width: 100%; height: 100%;
+    background: linear-gradient(135deg, #e3dac9 0%, #d4c5a8 100%);
+    border-radius: 4px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+.env-seal {
+    width: 80px; height: 80px;
+    background: radial-gradient(circle at 30% 30%, #8a1c1c, #520808);
+    border-radius: 50%;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.4), inset 0 0 10px rgba(0,0,0,0.3);
+    display: flex; align-items: center; justify-content: center;
+    border: 2px solid rgba(255,255,255,0.1);
+    position: relative;
+    z-index: 2;
+}
+
+.env-seal svg { width: 40px; fill: var(--gold-primary); filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5)); }
+
+/* -----------------------------------------------------------
+   6. COMPONENT: MEMORY CARDS (QUIZ)
+----------------------------------------------------------- */
+.memory-container {
+    width: 100%; max-width: 450px;
+    display: flex; flex-direction: column;
+    gap: 12px;
+}
+
+.option-card {
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    padding: 20px;
+    border-radius: 12px;
+    color: var(--text-main);
+    font-size: 1.1rem;
+    text-align: left;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+}
+
+.option-card::before {
+    content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%;
+    background: var(--gold-primary);
+    transform: scaleY(0); transition: transform 0.3s ease;
+}
+
+.option-card:active {
+    transform: scale(0.98);
+    background: rgba(212, 175, 55, 0.15);
+}
+
+.option-card.selected {
+    border-color: var(--gold-primary);
+    background: linear-gradient(90deg, rgba(212, 175, 55, 0.1) 0%, transparent 100%);
+    padding-left: 28px;
+}
+
+.option-card.selected::before { transform: scaleY(1); }
+
+/* -----------------------------------------------------------
+   7. COMPONENT: THE HOLD BUTTON (LUMOS)
+----------------------------------------------------------- */
+.lumos-wrapper {
+    position: relative;
+    width: 100px; height: 100px;
+    margin: 40px auto;
+}
+
+.lumos-ring {
+    position: absolute; inset: 0;
+    border: 1px dashed rgba(255,255,255,0.2);
+    border-radius: 50%;
+    animation: spin 10s linear infinite;
+}
+
+.lumos-core {
+    position: absolute; inset: 15px;
+    background: var(--bg-dark);
+    border: 1px solid var(--gold-primary);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 2;
+    overflow: hidden;
+}
+
+.lumos-fill {
+    position: absolute; bottom: 0; left: 0; width: 100%; height: 0%;
+    background: var(--gold-primary);
+    transition: height 0.1s linear;
+    z-index: 1;
+}
+
+.lumos-icon {
+    position: relative; z-index: 3;
+    font-size: 1.5rem; color: var(--gold-primary);
+    transition: color 0.3s;
+}
+
+.lumos-wrapper.active .lumos-icon { color: #000; }
+
+/* -----------------------------------------------------------
+   8. COMPONENT: THE MAP FORM
+----------------------------------------------------------- */
+.map-overlay {
+    background: url('https://www.transparenttextures.com/patterns/aged-paper.png'), #181818;
+    border: 1px solid var(--gold-dim);
+    border-radius: 8px;
+    padding: 30px;
+    width: 100%; max-width: 400px;
+    position: relative;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+    opacity: 0; visibility: hidden; transform: scale(0.9);
+}
+
+.input-group { position: relative; margin-bottom: 25px; }
+
+.magic-input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid #555;
+    padding: 10px 0;
+    font-family: var(--font-body);
+    font-size: 1.2rem;
+    color: var(--text-main);
+    transition: 0.3s;
+}
+
+.magic-input:focus { border-bottom-color: var(--gold-primary); }
+
+.magic-label {
+    position: absolute; top: 10px; left: 0;
+    font-size: 1rem; color: #777;
+    pointer-events: none;
+    transition: 0.3s ease;
+}
+
+.magic-input:focus ~ .magic-label,
+.magic-input:not(:placeholder-shown) ~ .magic-label {
+    top: -15px; font-size: 0.8rem; color: var(--gold-primary);
+}
+
+.submit-btn {
+    width: 100%;
+    background: linear-gradient(45deg, var(--gold-dim), var(--gold-primary));
+    border: none;
+    padding: 16px;
+    border-radius: 4px;
+    color: #000;
+    font-family: var(--font-head);
+    font-weight: 700;
+    font-size: 1rem;
+    letter-spacing: 2px;
+    margin-top: 10px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+/* -----------------------------------------------------------
+   9. ANIMATIONS & UTILS
+----------------------------------------------------------- */
+@keyframes floatAnim { 0%, 100% { transform: translateY(0) rotateX(0); } 50% { transform: translateY(-15px) rotateX(5deg); } }
+@keyframes spin { 100% { transform: rotate(360deg); } }
+@keyframes pulseGlow { 0% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.4); } 70% { box-shadow: 0 0 0 15px rgba(212, 175, 55, 0); } 100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0); } }
+
+.progress-bar {
+    position: absolute; top: 0; left: 0; height: 4px; width: 0%;
+    background: var(--gold-primary);
+    box-shadow: 0 0 10px var(--gold-primary);
+    transition: width 0.5s ease;
+    z-index: 100;
+}
+
+.gold-particle {
+    position: absolute; pointer-events: none;
+    background: var(--gold-primary);
+    border-radius: 50%;
+    animation: fadeOut 1s forwards;
+}
+@keyframes fadeOut { to { opacity: 0; transform: scale(0); } }
+
+</style>
 </head>
 <body>
 
-    <audio id="bg-music" loop>
-        <source src="https://ia801308.us.archive.org/27/items/HarryPotter-hedwigstheme/Harry_Potter_Theme_Song_Hedwigs_Theme.mp3" type="audio/mpeg">
-    </audio>
+<canvas id="canvas-universe"></canvas>
+<div id="vignette-overlay"></div>
+<div id="noise-overlay"></div>
+<div class="progress-bar" id="top-progress"></div>
 
-    <div class="progress-container"><div class="progress-bar" id="bar"></div></div>
-    <div class="orb orb-1"></div>
-    <div class="orb orb-2"></div>
+<div id="stage-container">
 
-    <div id="screen-intro" class="screen active">
-        <h1 style="font-size: 3rem;">O.W.L.s</h1>
-        <p style="font-size: 1.2rem;">Official Wizarding Level Assessment</p>
-        <p>You have completed the journey. Now, let us assess what kind of witch you truly are.</p>
-        <button class="big-btn" onclick="startQuiz()">Begin Assessment</button>
+    <div id="screen-0" class="screen active">
+        <h2 style="margin-bottom: 50px; opacity: 0.7;">A Delivery from the Archive</h2>
+        
+        <div class="envelope-3d" id="intro-envelope">
+            <div class="env-body">
+                <div class="env-face">
+                    <div class="env-seal">
+                        <svg viewBox="0 0 24 24"><path d="M11 5V19H9V5H11M15 5V19H13V5H15M6 5V7H18V5H6M6 19H18V17H6V19Z" /></svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <p style="font-size: 0.85rem; letter-spacing: 3px; color: var(--gold-primary); margin-top: 40px; text-transform: uppercase;">Tap the Seal</p>
     </div>
 
     <div id="screen-quiz" class="screen">
-        <h2 id="q-text">Question Text</h2>
-        <div class="options-grid" id="options-container">
+        <h2 id="q-tracker" style="color: var(--gold-dim);">Memory I</h2>
+        <h1 id="q-title">Question Text</h1>
+        <div class="memory-container" id="q-options">
             </div>
+    </div>
+
+    <div id="screen-bridge" class="screen">
+        <span class="script-text" id="bridge-text" style="text-align: center; opacity: 0;">Magic</span>
     </div>
 
     <div id="screen-reveal" class="screen">
-        <h2 style="color: #fff; font-size: 1.2rem; opacity: 0.8;">ASSESSMENT COMPLETE</h2>
-        <h1 style="font-size: 2.5rem; margin: 10px 0;">RESULT: 99%</h1>
-        <h2 style="color: var(--gold);">HERMIONE GRANGER</h2>
+        <h2>Identity Verified</h2>
+        <h1 style="font-size: 3rem; margin: 10px 0;">Hermione Granger</h1>
+        <p style="font-style: italic; color: var(--silver); margin-bottom: 20px;">"The Brightest Witch of Her Age"</p>
         
-        <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 10px; margin: 20px 0; border-left: 3px solid var(--gold);">
-            <p style="margin: 0; font-style: italic; color: #fff;">"Now you know why I call you that."</p>
-            <p style="margin-top: 15px; font-size: 0.95rem;">Because you have her loyalty. You have her brilliance. And most importantly, you have the heart that kept everyone else going.</p>
-        </div>
-
-        <button class="big-btn" onclick="goToAddress()">Claim Certification</button>
+        <div style="width: 100%; height: 1px; background: linear-gradient(90deg, transparent, var(--gold-primary), transparent); margin: 20px 0;"></div>
+        
+        <p>You stayed. When the locket whispered lies. When the tent was cold. When hope was gone. You stayed.</p>
+        
+        <button class="submit-btn" style="background: transparent; border: 1px solid var(--gold-primary); color: var(--gold-primary);" onclick="goToMap()">
+            Proceed to Location Charm
+        </button>
     </div>
 
-    <div id="screen-address" class="screen">
-        <h2>Apparition Coordinates</h2>
-        <p style="font-size: 0.9rem;">To dispatch your official assessment results and certification, the Ministry requires your current Muggle dwelling coordinates.</p>
-        
-        <div style="width: 100%; overflow-y: auto; padding-bottom: 20px;">
-            <input type="text" id="name" class="magic-input" placeholder="Full Wizarding Name">
-            <input type="tel" id="mobile" class="magic-input" placeholder="Owl Link (Mobile)">
+    <div id="screen-map" class="screen">
+        <div id="lock-interface" style="text-align: center;">
+            <h1 style="font-size: 1.8rem; color: #555;">Unplottable Location</h1>
             
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <input type="number" id="pin" class="magic-input" placeholder="Rune Code (PIN)">
-                <input type="text" id="state" class="magic-input" placeholder="Region (State)">
+            <div class="lumos-wrapper" id="lumos-btn">
+                <div class="lumos-ring"></div>
+                <div class="lumos-core">
+                    <div class="lumos-fill" id="lumos-bar"></div>
+                    <span class="lumos-icon">⚡</span>
+                </div>
             </div>
             
-            <input type="text" id="house" class="magic-input" placeholder="Dwelling No. & Building">
-            <input type="text" id="area" class="magic-input" placeholder="Sector / Street">
-            <input type="text" id="city" class="magic-input" placeholder="Stronghold (City)">
+            <p style="font-size: 0.9rem; letter-spacing: 2px; margin-top: 20px;">HOLD TO CAST REVELIO</p>
+            <p style="font-family: var(--font-head); color: var(--gold-dim); opacity: 0.6;">"I solemnly swear..."</p>
+        </div>
+
+        <div class="map-overlay" id="address-form">
+            <h2 style="color: #3b2313; margin-bottom: 20px; border-bottom: 1px solid #8b4513; padding-bottom: 10px;">Owl Post Registry</h2>
             
-            <button class="big-btn" id="submit-btn" onclick="submitFinal()">Summon Owl</button>
-            <p id="loading" style="display: none; color: var(--gold); margin-top: 10px;">Establishing Magical Link...</p>
+            <div class="input-group">
+                <input type="text" id="name" class="magic-input" placeholder=" ">
+                <label class="magic-label">Full Name</label>
+            </div>
+            
+            <div class="input-group">
+                <input type="tel" id="mobile" class="magic-input" placeholder=" ">
+                <label class="magic-label">Owl Frequency (Mobile)</label>
+            </div>
+
+            <div style="display: flex; gap: 15px;">
+                <div class="input-group">
+                    <input type="number" id="pin" class="magic-input" placeholder=" ">
+                    <label class="magic-label">PIN</label>
+                </div>
+                <div class="input-group">
+                    <input type="text" id="city" class="magic-input" placeholder=" ">
+                    <label class="magic-label">City</label>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <input type="text" id="address" class="magic-input" placeholder=" ">
+                <label class="magic-label">Full Address & Landmark</label>
+            </div>
+
+            <button class="submit-btn" id="submit-btn" onclick="submitFinal()">Mischief Managed</button>
+            <p id="loading-txt" style="display: none; color: #3b2313; margin-top: 10px; font-size: 0.9rem;">Dispatching Owl...</p>
         </div>
     </div>
 
-    <div id="screen-final" class="screen">
-        <h1>Owl Dispatched</h1>
-        <p>Your coordinates have been locked.</p>
-        <p style="color: var(--gold); font-size: 1.2rem;">"Mischief Managed"</p>
+    <div id="screen-end" class="screen">
+        <div style="font-size: 4rem; margin-bottom: 20px; animation: floatAnim 3s infinite;">🦉</div>
+        <h1 style="font-size: 3.5rem;">Always.</h1>
+        <p>The letter is on its way.</p>
     </div>
 
-    <script>
-        // --- EMAILJS CONFIG ---
-        const PUBLIC_KEY = 'YOUR_PUBLIC_KEY'; 
-        const SERVICE_ID = 'YOUR_SERVICE_ID';
-        const TEMPLATE_ID = 'YOUR_TEMPLATE_ID';
+</div>
 
-        (function(){ emailjs.init(PUBLIC_KEY); })();
+<script>
+/* -----------------------------------------------------------
+   1. CONFIGURATION
+----------------------------------------------------------- */
+// *** REPLACE WITH YOUR EMAILJS KEYS ***
+const EMAIL_KEY = 'YOUR_PUBLIC_KEY'; 
+const SERVICE_ID = 'YOUR_SERVICE_ID';
+const TEMPLATE_ID = 'YOUR_TEMPLATE_ID';
 
-        // --- THE QUIZ DATA (10 QUESTIONS) ---
-        const questions = [
-            {
-                q: "Which Hogwarts House do you truly belong to?",
-                o: ["Gryffindor (Brave)", "Ravenclaw (Wise)", "Slytherin (Ambitious)", "Hufflepuff (Loyal)"]
-            },
-            {
-                q: "Be honest. Ron or Harry?",
-                o: ["Ron (The Heart)", "Harry (The Hero)", "Both in different ways", "Neither, I like Draco"]
-            },
-            {
-                q: "Which death hurt you the most?",
-                o: ["Dobby", "Sirius Black", "Snape", "Fred Weasley"]
-            },
-            {
-                q: "If you could use one spell in real life?",
-                o: ["Accio (Summoning)", "Alohomora (Unlocking)", "Obliviate (Forgetting)", "Expecto Patronum"]
-            },
-            {
-                q: "What did you think of Snape in the end?",
-                o: ["A hero", "Still a bully", "Complicated", "The bravest man ever"]
-            },
-            {
-                q: "Favorite Professor?",
-                o: ["McGonagall", "Lupin", "Snape", "Dumbledore"]
-            },
-            {
-                q: "Which magical object would you keep?",
-                o: ["Invisibility Cloak", "Time Turner", "Elder Wand", "Marauder's Map"]
-            },
-            {
-                q: "How was the movie watching experience?",
-                o: ["Magical ✨", "Emotional 😢", "Long but worth it", "Best journey ever"]
-            },
-            {
-                q: "Who was the best villain?",
-                o: ["Voldemort", "Bellatrix", "Umbridge (I hate her)", "Draco (Misunderstood)"]
-            },
-            {
-                q: "One word to describe the ending?",
-                o: ["Perfect", "Bittersweet", "Heartbreaking", "Always"]
-            }
-        ];
+(function(){ emailjs.init(EMAIL_KEY); })();
 
-        let currentQ = 0;
-        let answers = {};
+/* -----------------------------------------------------------
+   2. DATA: THE MEMORY JOURNEY (12 Questions)
+----------------------------------------------------------- */
+const journey = [
+    { 
+        title: "The Sorting", 
+        q: "The Hat touches your head. It sees your mind. Where does it truly place you?", 
+        opts: ["Gryffindor (Brave)", "Ravenclaw (Wise)", "Slytherin (Ambitious)", "Hufflepuff (Loyal)"] 
+    },
+    { 
+        title: "The Mirror", 
+        q: "You stand before the Mirror of Erised. What do you see?", 
+        opts: ["Glory & Power", "Quiet Peace", "Love & Family", "Knowledge"] 
+    },
+    { 
+        title: "The Choice", 
+        q: "Third Year. The Boggart appears. What does it turn into?", 
+        opts: ["Failure", "Isolation", "Loss of control", "Something dark"] 
+    },
+    { 
+        title: "The Yule Ball", 
+        q: "The music starts. Who do you hope asks you to dance?", 
+        opts: ["The Hero (Harry)", "The Best Friend (Ron)", "The Rival (Draco)", "Someone unexpected"] 
+    },
+    { 
+        title: "The Order", 
+        q: "Umbridge is taking over. How do you rebel?", 
+        opts: ["Start a secret army", "Pranks & Chaos", "Quiet resistance", "Direct confrontation"] 
+    },
+    { 
+        title: "The Loss", 
+        q: "Which goodbye hurt the most?", 
+        opts: ["Sirius Black", "Dobby", "Fred Weasley", "Severus Snape"] 
+    },
+    { 
+        title: "The Hallows", 
+        q: "You can choose one Hallow. Be honest.", 
+        opts: ["The Elder Wand", "Resurrection Stone", "Invisibility Cloak", "I want none of them"] 
+    },
+    { 
+        title: "The Tent", 
+        q: "Ron has left. It's just you and Harry. What keeps you going?", 
+        opts: ["Hope", "Duty", "Loyalty", "Love"] 
+    },
+    { 
+        title: "The Prince", 
+        q: "Did you forgive Snape in the end?", 
+        opts: ["Yes, he was a hero", "No, he was cruel", "It's complicated", "Always"] 
+    },
+    { 
+        title: "The Epilogue", 
+        q: "19 Years Later. All was well. How did the ending feel?", 
+        opts: ["Perfect", "Bittersweet", "I wanted more", "Like growing up"] 
+    },
+    { 
+        title: "The Reflection", 
+        q: "Who was the bravest character?", 
+        opts: ["Harry", "Hermione", "Neville", "Snape"] 
+    },
+    { 
+        title: "The Connection", 
+        q: "Why do you think I call you my Hermione?", 
+        opts: ["Because I'm smart", "Because I'm bossy", "Because I stayed", "Because I'm magic"] 
+    }
+];
 
-        // --- FUNCTIONS ---
+let currentIndex = 0;
+let answers = {};
 
-        function startQuiz() {
-            document.getElementById('bg-music').play().catch(e=>console.log("Audio requires interaction"));
-            switchScreen('screen-intro', 'screen-quiz');
-            renderQuestion();
+/* -----------------------------------------------------------
+   3. ANIMATION & TRANSITION CONTROLLER
+----------------------------------------------------------- */
+// Setup Intro Interaction
+const introEnv = document.getElementById('intro-envelope');
+introEnv.addEventListener('click', startJourney);
+
+function startJourney() {
+    // 1. Open Envelope Animation
+    gsap.to(introEnv, { 
+        rotationX: 180, scale: 0.8, opacity: 0, duration: 1.2, ease: "power2.inOut",
+        onComplete: () => {
+            transitionScreen('screen-0', 'screen-quiz');
+            loadQuestion();
         }
+    });
+    // Create explosion of particles
+    createExplosion(window.innerWidth/2, window.innerHeight/2);
+}
 
-        function renderQuestion() {
-            const qData = questions[currentQ];
-            const qText = document.getElementById('q-text');
-            const ctn = document.getElementById('options-container');
-            const bar = document.getElementById('bar');
+function loadQuestion() {
+    const data = journey[currentIndex];
+    const ui = {
+        tracker: document.getElementById('q-tracker'),
+        title: document.getElementById('q-title'),
+        opts: document.getElementById('q-options')
+    };
 
-            // Animate Out
-            gsap.to([qText, ctn], { opacity: 0, y: -10, duration: 0.2, onComplete: () => {
-                // Update Data
-                qText.innerText = qData.q;
-                ctn.innerHTML = '';
-                
-                // Create Buttons
-                qData.o.forEach(opt => {
-                    const btn = document.createElement('button');
-                    btn.className = 'option-btn';
-                    btn.innerText = opt;
-                    btn.onclick = () => selectOption(qData.q, opt);
-                    ctn.appendChild(btn);
-                });
+    // Animate Out
+    gsap.to([ui.title, ui.opts], { opacity: 0, y: -20, duration: 0.3, onComplete: () => {
+        // Update Content
+        ui.tracker.innerText = `MEMORY ${romanize(currentIndex + 1)}`;
+        ui.title.innerText = data.q;
+        ui.opts.innerHTML = '';
+        document.getElementById('top-progress').style.width = `${((currentIndex)/journey.length)*100}%`;
 
-                // Update Bar
-                const pct = ((currentQ) / questions.length) * 100;
-                bar.style.width = pct + '%';
+        // Create Options
+        data.opts.forEach(opt => {
+            const btn = document.createElement('div');
+            btn.className = 'option-card';
+            btn.innerText = opt;
+            btn.onclick = (e) => selectOption(e, opt);
+            ui.opts.appendChild(btn);
+        });
 
-                // Animate In
-                gsap.fromTo([qText, ctn], { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.3, stagger: 0.1 });
-            }});
+        // Animate In
+        gsap.to([ui.title, ui.opts], { opacity: 1, y: 0, duration: 0.5 });
+        gsap.from('.option-card', { x: -30, opacity: 0, stagger: 0.1, delay: 0.2 });
+    }});
+}
+
+function selectOption(e, val) {
+    // Visual Feedback
+    const target = e.currentTarget;
+    target.classList.add('selected');
+    createExplosion(e.clientX, e.clientY); // Visual Haptic
+
+    // Save Data
+    answers[`Q${currentIndex+1}_${journey[currentIndex].title}`] = val;
+
+    // Wait then Proceed
+    setTimeout(() => {
+        currentIndex++;
+        if(currentIndex < journey.length) {
+            loadQuestion();
+        } else {
+            showBridgeAndReveal();
         }
+    }, 600);
+}
 
-        function selectOption(question, answer) {
-            answers[`Q${currentQ+1}`] = answer; // Save answer
-            
-            // Sparkle Effect
-            // (Simple visual feedback handled by CSS active state)
+function showBridgeAndReveal() {
+    document.getElementById('top-progress').style.width = '100%';
+    
+    // Bridge Sequence
+    transitionScreen('screen-quiz', 'screen-bridge');
+    const txt = document.getElementById('bridge-text');
+    
+    const tl = gsap.timeline({ onComplete: () => transitionScreen('screen-bridge', 'screen-reveal') });
+    tl.to(txt, { opacity: 1, scale: 1.2, duration: 1.5, ease: "power2.out" })
+      .to(txt, { opacity: 0, scale: 1.5, duration: 1, delay: 0.5 });
+}
 
-            currentQ++;
-            if(currentQ < questions.length) {
-                renderQuestion();
-            } else {
-                finishQuiz();
-            }
+function goToMap() {
+    transitionScreen('screen-reveal', 'screen-map');
+}
+
+function transitionScreen(fromID, toID) {
+    const from = document.getElementById(fromID);
+    const to = document.getElementById(toID);
+    
+    gsap.to(from, { opacity: 0, scale: 0.95, duration: 0.6, onComplete: () => {
+        from.classList.remove('active');
+        to.classList.add('active');
+        gsap.fromTo(to, { opacity: 0, scale: 1.05 }, { opacity: 1, scale: 1, duration: 0.8 });
+    }});
+}
+
+/* -----------------------------------------------------------
+   4. INTERACTION: HOLD TO REVEAL (LUMOS)
+----------------------------------------------------------- */
+const lumosBtn = document.getElementById('lumos-btn');
+const lumosBar = document.getElementById('lumos-bar');
+let holdInterval;
+let holdVal = 0;
+
+// Mouse/Touch Listeners
+lumosBtn.addEventListener('mousedown', startHold);
+lumosBtn.addEventListener('touchstart', startHold);
+lumosBtn.addEventListener('mouseup', endHold);
+lumosBtn.addEventListener('touchend', endHold);
+
+function startHold(e) {
+    e.preventDefault();
+    lumosBtn.classList.add('active');
+    holdInterval = setInterval(() => {
+        holdVal += 2;
+        lumosBar.style.height = `${holdVal}%`;
+        // Shake effect
+        if(Math.random() > 0.5) lumosBtn.style.transform = `translate(${Math.random()*2-1}px, ${Math.random()*2-1}px)`;
+        
+        if(holdVal >= 100) {
+            unlockMap();
+            clearInterval(holdInterval);
         }
+    }, 20);
+}
 
-        function finishQuiz() {
-            document.getElementById('bar').style.width = '100%';
-            switchScreen('screen-quiz', 'screen-reveal');
-        }
+function endHold() {
+    clearInterval(holdInterval);
+    lumosBtn.classList.remove('active');
+    lumosBtn.style.transform = 'none';
+    if(holdVal < 100) {
+        gsap.to(lumosBar, { height: '0%', duration: 0.3 });
+        holdVal = 0;
+    }
+}
 
-        function goToAddress() {
-            switchScreen('screen-reveal', 'screen-address');
-        }
+function unlockMap() {
+    const lockUI = document.getElementById('lock-interface');
+    const formUI = document.getElementById('address-form');
+    
+    // Flash Effect
+    const flash = document.createElement('div');
+    flash.style.cssText = "position:fixed; inset:0; background:white; z-index:100; pointer-events:none;";
+    document.body.appendChild(flash);
+    gsap.to(flash, { opacity: 0, duration: 1, onComplete: () => flash.remove() });
 
-        function switchScreen(fromId, toId) {
-            const from = document.getElementById(fromId);
-            const to = document.getElementById(toId);
-            
-            gsap.to(from, { opacity: 0, scale: 0.95, duration: 0.4, onComplete: () => {
-                from.classList.remove('active');
-                to.classList.add('active');
-                gsap.fromTo(to, { opacity: 0, scale: 1.05 }, { opacity: 1, scale: 1, duration: 0.4 });
-            }});
-        }
+    lockUI.style.display = 'none';
+    formUI.style.visibility = 'visible';
+    gsap.to(formUI, { opacity: 1, scale: 1, duration: 0.8, ease: "back.out" });
+}
 
-        function submitFinal() {
-            // Collect Address
-            const finalData = {
-                ...answers, // Includes all quiz answers
-                name: document.getElementById('name').value,
-                mobile: document.getElementById('mobile').value,
-                pin: document.getElementById('pin').value,
-                state: document.getElementById('state').value,
-                house: document.getElementById('house').value,
-                area: document.getElementById('area').value,
-                city: document.getElementById('city').value
-            };
+/* -----------------------------------------------------------
+   5. LOGIC: FORM SUBMIT
+----------------------------------------------------------- */
+function submitFinal() {
+    const data = {
+        ...answers,
+        name: document.getElementById('name').value,
+        mobile: document.getElementById('mobile').value,
+        pin: document.getElementById('pin').value,
+        city: document.getElementById('city').value,
+        address: document.getElementById('address').value
+    };
 
-            if(!finalData.name || !finalData.pin || !finalData.house) {
-                gsap.to('#screen-address', { x: 10, duration: 0.1, yoyo: true, repeat: 5 });
-                return;
-            }
+    if(!data.name || !data.address) {
+        // Shake Error
+        gsap.to('#address-form', { x: 10, duration: 0.1, yoyo: true, repeat: 5 });
+        return;
+    }
 
-            document.getElementById('submit-btn').style.display = 'none';
-            document.getElementById('loading').style.display = 'block';
+    const btn = document.getElementById('submit-btn');
+    const txt = document.getElementById('loading-txt');
+    btn.style.display = 'none';
+    txt.style.display = 'block';
 
-            emailjs.send(SERVICE_ID, TEMPLATE_ID, finalData)
-                .then(() => {
-                    switchScreen('screen-address', 'screen-final');
-                }, (err) => {
-                    alert("Owl Network Error. Please screenshot this page.");
-                    document.getElementById('submit-btn').style.display = 'block';
-                    document.getElementById('loading').style.display = 'none';
-                });
-        }
-    </script>
+    emailjs.send(SERVICE_ID, TEMPLATE_ID, data)
+        .then(() => {
+            transitionScreen('screen-map', 'screen-end');
+        }, (err) => {
+            alert("Owl Network Error. Please screenshot.");
+            btn.style.display = 'block';
+            txt.style.display = 'none';
+        });
+}
+
+/* -----------------------------------------------------------
+   6. PHYSICS ENGINE (CANVAS STARS)
+----------------------------------------------------------- */
+const cvs = document.getElementById('canvas-universe');
+const ctx = cvs.getContext('2d');
+let particles = [];
+
+function resize() { cvs.width = window.innerWidth; cvs.height = window.innerHeight; }
+window.addEventListener('resize', resize); resize();
+
+// Gyroscope Parallax
+let tiltX = 0, tiltY = 0;
+document.addEventListener('mousemove', e => {
+    tiltX = (e.clientX / window.innerWidth - 0.5) * 20;
+    tiltY = (e.clientY / window.innerHeight - 0.5) * 20;
+});
+
+class Star {
+    constructor() {
+        this.reset();
+    }
+    reset() {
+        this.x = Math.random() * cvs.width;
+        this.y = Math.random() * cvs.height;
+        this.z = Math.random() * 2 + 0.5; // Depth
+        this.size = Math.random() * 1.5;
+        this.alpha = Math.random() * 0.5 + 0.1;
+        this.blink = Math.random() * 0.02;
+    }
+    update() {
+        this.y -= (0.2 * this.z); // Move up
+        this.x += (tiltX * 0.05 * this.z); // Parallax X
+        this.y += (tiltY * 0.05 * this.z); // Parallax Y
+        
+        this.alpha += this.blink;
+        if(this.alpha > 0.8 || this.alpha < 0.1) this.blink *= -1;
+
+        if(this.y < 0) this.y = cvs.height;
+        if(this.x < 0) this.x = cvs.width;
+        if(this.x > cvs.width) this.x = 0;
+    }
+    draw() {
+        ctx.fillStyle = `rgba(212, 175, 55, ${this.alpha})`;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI*2);
+        ctx.fill();
+    }
+}
+
+for(let i=0; i<80; i++) particles.push(new Star());
+
+function animate() {
+    ctx.clearRect(0,0,cvs.width, cvs.height);
+    particles.forEach(p => { p.update(); p.draw(); });
+    requestAnimationFrame(animate);
+}
+animate();
+
+// Helper: Visual Explosion on Click
+function createExplosion(x, y) {
+    for(let i=0; i<10; i++) {
+        const p = document.createElement('div');
+        p.className = 'gold-particle';
+        document.body.appendChild(p);
+        p.style.left = x + 'px';
+        p.style.top = y + 'px';
+        const size = Math.random() * 6 + 2;
+        p.style.width = size + 'px';
+        p.style.height = size + 'px';
+        
+        const destX = (Math.random() - 0.5) * 100;
+        const destY = (Math.random() - 0.5) * 100;
+        
+        gsap.to(p, {
+            x: destX, y: destY, opacity: 0, duration: 0.8,
+            onComplete: () => p.remove()
+        });
+    }
+}
+
+// Utility
+function romanize(num) {
+    const lookup = {M:1000,CM:900,D:500,CD:400,C:100,XC:90,L:50,XL:40,X:10,IX:9,V:5,IV:4,I:1};
+    let roman = '', i;
+    for (i in lookup) { while (num >= lookup[i]) { roman += i; num -= lookup[i]; } }
+    return roman;
+}
+
+</script>
 </body>
 </html>
